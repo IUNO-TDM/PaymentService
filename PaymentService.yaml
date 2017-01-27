@@ -1,0 +1,169 @@
+# this is an example of the Uber API
+# as a demonstration of an API spec in YAML
+swagger: '2.0'
+info:
+  title: IUNO TDM Payment Service API
+  description: Create invoices, check payment and forward coins.
+  version: "1.0.0"
+# the domain of the service
+host: localhost
+# array of all schemes that your API supports
+schemes:
+  - https
+  - http
+# will be prefixed to all paths
+basePath: /v1
+produces:
+  - application/json
+paths:
+  /invoices:
+    get:
+      summary: The invoices endpoint returns a list of all known invoices ids.
+      responses:
+        200:
+          description: an array of invoices uuids
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/InvoiceId'
+    post:
+      summary: Add a new invoice.
+      parameters:
+        - name: totalAmount
+          in: query
+          description: total amount of satoshis to invoice
+          required: true
+          type: integer
+          format: int64
+        - name: expiration
+          in: query
+          description: expiration date of the invoice
+          type: string
+          format: date-time
+        - name: transfers
+          description: address and values pairs to pay directly
+          in: body
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/AddressValuePair'
+      responses:
+        200:
+          description: id of new invoice
+          schema:
+            $ref: '#/definitions/InvoiceId'
+        400:
+          description: bad request
+          schema:
+            $ref: '#/definitions/Error'
+        503:
+          description: service unavailable
+          schema:
+            $ref: '#/definitions/Error'
+ 
+  /invoices/{invoiceId}:
+    get:
+      summary: Returns information about the invoice to the provided id.
+      operationId: getInvoiceByUuid
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the invoice id to get the information for
+      responses:
+        404:
+          description: invoice not found
+        200:
+          description: returns the information about the invoice
+          schema:
+            $ref: '#/definitions/Invoice'
+
+    post:
+      description: Adds a coupon to the invoice.
+      operationId: addCoupon
+      parameters:
+      - name: invoiceId
+        in: path
+        type: string
+        required: true
+        description: the id to get the invoice for
+      - name: coupon
+        in: query
+        type: string
+        required: true
+        description: code of coupon
+      responses:
+        500:
+          description: balance of coupon could not be retrieved
+          schema:
+            $ref: '#/definitions/Error'
+        404:
+          description: invoice id not found
+        200:
+          description: returns the balance of the coupon as well as the total of the invoice
+          schema:
+            $ref: '#/definitions/AddressValuePair'
+ 
+    delete:
+      summary: Deletes the invoice to the provided ID.
+      operationId: deleteInvoiceByUuid
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the uuid to get the invoice for
+      responses:
+        404:
+          description: invoice not found
+        200:
+          description: invoice deleted
+
+definitions:
+  InvoiceId:
+    type: string
+    description: unique invoice id
+
+  AddressValuePair:
+    type: object
+    properties:
+      Address:
+        type: string
+        description: Bitcoin Base58 encoded public key hash address
+      Coin:
+        type: integer
+        format: int64
+        description: value in Satoshis 
+
+  Invoice:
+    type: object
+    properties:
+      TotalAmount:
+        type: integer
+        format: int64
+        description: total amount of Satoshis that are requested to be paid
+      Expiration:
+        type: string
+        format: date-time
+        description: date after which this invoice is no longer valid
+      Transfers:
+        type: array
+        description: array of all outputs with their values
+        items:
+          $ref: '#/definitions/AddressValuePair'
+      CouponBalances:
+        type: array
+        items:
+          $ref: '#/definitions/AddressValuePair'
+        description: current balance of all provided coupons in Satoshis
+      bip21Uri:
+        type: string
+        description: BIP21 URI
+
+  Error:
+    type: object
+    properties:
+      Message:
+        type: string
+        description: meaningful error message
