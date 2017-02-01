@@ -16,26 +16,15 @@ produces:
 paths:
   /invoices:
     post:
-      summary: Add a new invoice.
+      summary: Add new invoices.
       parameters:
-        - name: totalAmount
-          in: query
-          description: total amount of satoshis to invoice
-          required: true
-          type: integer
-          format: int64
-        - name: expiration
-          in: query
-          description: expiration date of the invoice
-          type: string
-          format: date-time
-        - name: transfers
-          description: address and values pairs to pay directly
+        - name: invoices
+          description: list of invoices
           in: body
           schema:
             type: array
             items:
-              $ref: '#/definitions/AddressValuePair'
+              $ref: '#/definitions/Invoice'
       responses:
         200:
           description: id of new invoice
@@ -58,7 +47,7 @@ paths:
             type: array
             items:
               $ref: '#/definitions/InvoiceId'
- 
+
   /invoices/{invoiceId}:
     get:
       summary: Returns information about the invoice to the provided id.
@@ -75,7 +64,7 @@ paths:
         200:
           description: returns the information about the invoice
           schema:
-            $ref: '#/definitions/Invoice'
+            $ref: '#/definitions/InvoiceResponseToDo'
 
     delete:
       summary: Deletes the invoice to the provided ID.
@@ -151,9 +140,26 @@ definitions:
       Coin:
         type: integer
         format: int64
-        description: value in Satoshis 
+        description: value in Satoshis
 
   Invoice:
+    type: object
+    properties:
+      TotalAmount:
+        type: integer
+        format: int64
+        description: total amount of Satoshis that are requested to be paid
+      Expiration:
+        type: string
+        format: date-time
+        description: date after which this invoice is no longer valid
+      Transfers:
+        type: array
+        description: array of all outputs with their values
+        items:
+          $ref: '#/definitions/AddressValuePair'
+
+  InvoiceResponseToDo:
     type: object
     properties:
       TotalAmount:
