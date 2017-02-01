@@ -21,6 +21,7 @@ paths:
         - name: invoices
           description: list of invoices
           in: body
+          required: true
           schema:
             type: array
             items:
@@ -64,8 +65,15 @@ paths:
         200:
           description: returns the information about the invoice
           schema:
-            $ref: '#/definitions/InvoiceResponseToDo'
-
+            type: object
+            properties:
+              Invoice:
+                $ref: "#/definitions/Invoice"
+              CouponBalances:
+                $ref: "#/definitions/AddressValuePair"
+              Bip21Uri:
+                description: bip21 invoice uri
+                type: string
     delete:
       summary: Deletes the invoice to the provided ID.
       operationId: deleteInvoiceByUuid
@@ -158,31 +166,6 @@ definitions:
         description: array of all outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
-
-  InvoiceResponseToDo:
-    type: object
-    properties:
-      TotalAmount:
-        type: integer
-        format: int64
-        description: total amount of Satoshis that are requested to be paid
-      Expiration:
-        type: string
-        format: date-time
-        description: date after which this invoice is no longer valid
-      Transfers:
-        type: array
-        description: array of all outputs with their values
-        items:
-          $ref: '#/definitions/AddressValuePair'
-      CouponBalances:
-        type: array
-        items:
-          $ref: '#/definitions/AddressValuePair'
-        description: current balance of all provided coupons in Satoshis
-      bip21Uri:
-        type: string
-        description: BIP21 URI
 
   Error:
     type: object
