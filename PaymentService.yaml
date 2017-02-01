@@ -98,12 +98,13 @@ paths:
         in: path
         type: string
         required: true
-        description: the id to get the invoice for
-      - name: coupon
-        in: query
-        type: string
+        description: the id of the invoice the coupon is for
+      - name: coupons
+        in: body
         required: true
-        description: code of coupon
+        description: the coupon data
+        schema:
+          $ref: "#/definitions/Coupon"
       responses:
         500:
           description: balance of coupon could not be retrieved
@@ -111,8 +112,12 @@ paths:
             $ref: '#/definitions/Error'
         409:
           description: invoice already closed
+          schema:
+            $ref: '#/definitions/Error'
         404:
           description: invoice id not found
+          schema:
+            $ref: '#/definitions/Error'
         200:
           description: returns the balance of the coupon
           schema:
@@ -139,12 +144,19 @@ definitions:
     type: string
     description: unique invoice id
 
+  Coupon:
+    type: string
+    description: Bip38 encoded Bitcoin private key
+
+  Address:
+    type: string
+    description: Bitcoin Base58 encoded public key hash address
+
   AddressValuePair:
     type: object
     properties:
       Address:
-        type: string
-        description: Bitcoin Base58 encoded public key hash address
+        $ref: "#/definitions/Address"
       Coin:
         type: integer
         format: int64
