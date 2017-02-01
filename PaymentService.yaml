@@ -43,7 +43,7 @@ paths:
       summary: The invoices endpoint returns a list of all known invoices ids.
       responses:
         200:
-          description: an array of invoices uuids
+          description: an array of invoices ids
           schema:
             type: array
             items:
@@ -52,7 +52,7 @@ paths:
   /invoices/{invoiceId}:
     get:
       summary: Returns information about the invoice to the provided id.
-      operationId: getInvoiceByUuid
+      operationId: getInvoiceById
       parameters:
         - name: invoiceId
           in: path
@@ -76,13 +76,13 @@ paths:
                 type: string
     delete:
       summary: Deletes the invoice to the provided ID.
-      operationId: deleteInvoiceByUuid
+      operationId: deleteInvoiceById
       parameters:
         - name: invoiceId
           in: path
           type: string
           required: true
-          description: the uuid to get the invoice for
+          description: the id of the invoice to delete
       responses:
         404:
           description: invoice not found
