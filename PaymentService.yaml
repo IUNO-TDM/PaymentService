@@ -94,7 +94,7 @@ paths:
 
   /invoices/{invoiceId}/coupons:
     post:
-      description: Adds a coupon to the invoice.
+      summary: Adds a coupon to the invoice.
       operationId: addCoupon
       parameters:
       - name: invoiceId
@@ -112,10 +112,28 @@ paths:
           description: balance of coupon could not be retrieved
           schema:
             $ref: '#/definitions/Error'
+        409:
+          description: invoice already closed
         404:
           description: invoice id not found
         200:
-          description: returns the balance of the coupon as well as the total of the invoice
+          description: returns the balance of the coupon
+          schema:
+            $ref: '#/definitions/AddressValuePair'
+    get:
+      summary: Returns a list of coupons along with its values.
+      operationId: getCoupons
+      parameters:
+      - name: invoiceId
+        in: path
+        type: string
+        required: true
+        description: the id to get the invoice for
+      responses:
+        404:
+          description: invoice id not found
+        200:
+          description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
 
