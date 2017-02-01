@@ -62,6 +62,8 @@ paths:
       responses:
         404:
           description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
         200:
           description: returns the information about the invoice
           schema:
@@ -86,6 +88,8 @@ paths:
       responses:
         404:
           description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
         200:
           description: invoice deleted
 
@@ -130,10 +134,12 @@ paths:
         in: path
         type: string
         required: true
-        description: the id to get the invoice for
+        description: the id of the invoice to get the coupons balances for
       responses:
         404:
           description: invoice id not found
+          schema:
+            $ref: '#/definitions/Error'
         200:
           description: returns the balance of the coupon
           schema:
