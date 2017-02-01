@@ -15,15 +15,6 @@ produces:
   - application/json
 paths:
   /invoices:
-    get:
-      summary: The invoices endpoint returns a list of all known invoices ids.
-      responses:
-        200:
-          description: an array of invoices uuids
-          schema:
-            type: array
-            items:
-              $ref: '#/definitions/InvoiceId'
     post:
       summary: Add a new invoice.
       parameters:
@@ -58,6 +49,15 @@ paths:
           description: service unavailable
           schema:
             $ref: '#/definitions/Error'
+    get:
+      summary: The invoices endpoint returns a list of all known invoices ids.
+      responses:
+        200:
+          description: an array of invoices uuids
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/InvoiceId'
  
   /invoices/{invoiceId}:
     get:
