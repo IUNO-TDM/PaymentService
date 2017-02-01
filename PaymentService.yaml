@@ -77,6 +77,22 @@ paths:
           schema:
             $ref: '#/definitions/Invoice'
 
+    delete:
+      summary: Deletes the invoice to the provided ID.
+      operationId: deleteInvoiceByUuid
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the uuid to get the invoice for
+      responses:
+        404:
+          description: invoice not found
+        200:
+          description: invoice deleted
+
+  /invoices/{invoiceId}/coupons:
     post:
       description: Adds a coupon to the invoice.
       operationId: addCoupon
@@ -102,21 +118,6 @@ paths:
           description: returns the balance of the coupon as well as the total of the invoice
           schema:
             $ref: '#/definitions/AddressValuePair'
- 
-    delete:
-      summary: Deletes the invoice to the provided ID.
-      operationId: deleteInvoiceByUuid
-      parameters:
-        - name: invoiceId
-          in: path
-          type: string
-          required: true
-          description: the uuid to get the invoice for
-      responses:
-        404:
-          description: invoice not found
-        200:
-          description: invoice deleted
 
 definitions:
   InvoiceId:
