@@ -108,9 +108,11 @@ paths:
       - name: coupons
         in: body
         required: true
-        description: the coupon data
+        description: array with coupon data
         schema:
-          $ref: "#/definitions/Coupon"
+          type: array
+          items:
+            $ref: "#/definitions/Coupon"
       responses:
         500:
           description: balance of coupon could not be retrieved
