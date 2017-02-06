@@ -27,10 +27,12 @@ paths:
             items:
               $ref: '#/definitions/Invoice'
       responses:
-        200:
-          description: id of new invoice
-          schema:
-            $ref: '#/definitions/InvoiceId'
+        201:
+          description: operation succesful
+          headers:
+            location:
+              description: The absolute path to the created resource
+              type: string
         400:
           description: bad request
           schema:
@@ -106,11 +108,9 @@ paths:
       - name: coupons
         in: body
         required: true
-        description: array with coupon data
+        description: the coupon data
         schema:
-          type: array
-          items:
-            $ref: "#/definitions/Coupon"
+          $ref: "#/definitions/Coupon"
       responses:
         500:
           description: balance of coupon could not be retrieved
@@ -124,7 +124,7 @@ paths:
           description: invoice id not found
           schema:
             $ref: '#/definitions/Error'
-        200:
+        201:
           description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
@@ -142,7 +142,7 @@ paths:
           description: invoice id not found
           schema:
             $ref: '#/definitions/Error'
-        200:
+        201:
           description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
