@@ -16,22 +16,23 @@ produces:
 paths:
   /invoices:
     post:
-      summary: Add new invoices.
+      summary: Add one new invoice.
+      operationId: addInvoice
       parameters:
         - name: invoices
-          description: list of invoices
+          description: new invoice
           in: body
           required: true
           schema:
-            type: array
-            items:
-              $ref: '#/definitions/Invoice'
+            $ref: '#/definitions/RawInvoice'
       responses:
         201:
-          description: operation succesful
+          description: id of new invoice
+          schema:
+            $ref: "#/definitions/Invoice"
           headers:
-            location:
-              description: The absolute path to the created resource
+            Location:
+              description: the absolute path to the created resource
               type: string
         400:
           description: bad request
@@ -43,9 +44,10 @@ paths:
             $ref: '#/definitions/Error'
     get:
       summary: The invoices endpoint returns a list of all known invoices ids.
+      operationId: getInvoices
       responses:
         200:
-          description: an array of invoices ids
+          description: an array of invoice ids
           schema:
             type: array
             items:
@@ -69,15 +71,7 @@ paths:
         200:
           description: returns the information about the invoice
           schema:
-            type: object
-            properties:
-              Invoice:
-                $ref: "#/definitions/Invoice"
-              CouponBalances:
-                $ref: "#/definitions/AddressValuePair"
-              Bip21Uri:
-                description: bip21 invoice uri
-                type: string
+            $ref: "#/definitions/Invoice"
     delete:
       summary: Deletes the invoice to the provided ID.
       operationId: deleteInvoiceById
@@ -97,24 +91,22 @@ paths:
 
   /invoices/{invoiceId}/coupons:
     post:
-      summary: Adds a coupon to the invoice.
-      operationId: addCoupon
+      summary: Adds one coupon to the invoice.
+      operationId: addCouponToInvoice
       parameters:
       - name: invoiceId
         in: path
         type: string
         required: true
         description: the id of the invoice the coupon is for
-      - name: coupons
+      - name: coupon
         in: body
         required: true
-        description: array with coupon data
+        description: coupon data
         schema:
-          type: array
-          items:
-            $ref: "#/definitions/Coupon"
+          $ref: "#/definitions/Coupon"
       responses:
-        500:
+        503:
           description: balance of coupon could not be retrieved
           schema:
             $ref: '#/definitions/Error'
@@ -127,12 +119,16 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         201:
-          description: returns the balance of the coupon
+          description: returns the balance of the new coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
+          headers:
+            Location:
+              type: string
+              description: the absolute path to the created resource
     get:
-      summary: Returns a list of coupons along with its values.
-      operationId: getCoupons
+      summary: Returns a list of coupon adresses along with their balance.
+      operationId: getInvoiceCoupons
       parameters:
       - name: invoiceId
         in: path
@@ -144,7 +140,34 @@ paths:
           description: invoice id not found
           schema:
             $ref: '#/definitions/Error'
-        201:
+        200:
+          description: returns the balance for each coupon
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/AddressValuePair'
+
+  /invoices/{invoiceId}/coupons/{couponAddress}:
+    get:
+      summary: Returns the balance for the requested coupon.
+      operationId: getInvoiceCouponBalance
+      parameters:
+      - name: invoiceId
+        in: path
+        type: string
+        required: true
+        description: the id of the invoice to get the coupons balance for
+      - name: couponAddress
+        in: path
+        type: string
+        required: true
+        description: the address of the coupon to get the balance for
+      responses:
+        404:
+          description: object not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
           description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
@@ -172,7 +195,7 @@ definitions:
         format: int64
         description: value in Satoshis
 
-  Invoice:
+  RawInvoice:
     type: object
     properties:
       TotalAmount:
@@ -188,6 +211,19 @@ definitions:
         description: array of all outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
+
+  Invoice:
+    type: object
+    properties:
+      Invoice:
+        $ref: "#/definitions/RawInvoice"
+      CouponBalances:
+        type: array
+        items:
+          $ref: "#/definitions/AddressValuePair"
+      Bip21Uri:
+        description: bip21 invoice uri
+        type: string
 
   Error:
     type: object
