@@ -4,15 +4,18 @@ info:
   description: Create invoices, check payment and forward coins.
   version: "1.0.0"
 # the domain of the service
-host: localhost
+host: localhost:8080
 # array of all schemes that your API supports
 schemes:
-  - https
   - http
+#  - https
 # will be prefixed to all paths
 basePath: /v1
+consumes:
+  - application/json
 produces:
   - application/json
+
 paths:
   /invoices:
     post:
@@ -24,7 +27,7 @@ paths:
           in: body
           required: true
           schema:
-            $ref: '#/definitions/RawInvoice'
+            $ref: '#/definitions/Invoice'
       responses:
         201:
           description: id of new invoice
@@ -88,6 +91,29 @@ paths:
             $ref: '#/definitions/Error'
         200:
           description: invoice deleted
+
+  /invoices/{invoiceId}/bip21:
+    get:
+      summary: Returns a Bip21 URI for the invoice.
+      operationId: getInvoiceBip21
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the invoice id to get the Bip21 URI for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the Bip21 URI for the invoice
+          schema:
+            type: string
+
+# TODO: transfer object interface needed
+# TODO: invoice state information interface needed
 
   /invoices/{invoiceId}/coupons:
     post:
@@ -181,21 +207,18 @@ definitions:
     type: string
     description: Bip38 encoded Bitcoin private key
 
-  Address:
-    type: string
-    description: Bitcoin Base58 encoded public key hash address
-
   AddressValuePair:
     type: object
     properties:
       Address:
-        $ref: "#/definitions/Address"
+        type: string
+        description: Bitcoin Base58 encoded public key hash address
       Coin:
         type: integer
         format: int64
         description: value in Satoshis
 
-  RawInvoice:
+  Invoice:
     type: object
     properties:
       TotalAmount:
@@ -208,22 +231,9 @@ definitions:
         description: date after which this invoice is no longer valid
       Transfers:
         type: array
-        description: array of all outputs with their values
+        description: array of all transfer outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
-
-  Invoice:
-    type: object
-    properties:
-      Invoice:
-        $ref: "#/definitions/RawInvoice"
-      CouponBalances:
-        type: array
-        items:
-          $ref: "#/definitions/AddressValuePair"
-      Bip21Uri:
-        description: bip21 invoice uri
-        type: string
 
   Error:
     type: object
