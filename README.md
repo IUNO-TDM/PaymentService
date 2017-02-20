@@ -3,4 +3,4 @@
 [![Stories in Progress](https://badge.waffle.io/IUNO-TDM/PaymentService.png?label=in%20progress&title=In%20Progress)](https://waffle.io/IUNO-TDM/PaymentService)
 
 # PaymentService
-Service with websocket interface, that handles payments.
+Service with restful interface, that handles payments.

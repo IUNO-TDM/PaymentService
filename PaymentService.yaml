@@ -22,8 +22,8 @@ paths:
       summary: Add one new invoice.
       operationId: addInvoice
       parameters:
-        - name: invoices
-          description: new invoice
+        - name: invoice
+          description: one new invoice
           in: body
           required: true
           schema:
