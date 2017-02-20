@@ -10,6 +10,8 @@ import javax.servlet.ServletContext;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
 
+import iuno.tdm.payment.service.bitcoin.Bitcoin;
+
 public class Bootstrap extends HttpServlet {
   @Override
   public void init(ServletConfig config) throws ServletException {
@@ -26,6 +28,13 @@ public class Bootstrap extends HttpServlet {
     ServletContext context = config.getServletContext();
     Swagger swagger = new Swagger().info(info);
 
+    Bitcoin bitcoin = Bitcoin.getInstance();
+
     new SwaggerContextService().withServletConfig(config).updateSwagger(swagger);
+  }
+
+  @Override
+  public void destroy() {
+    Bitcoin bitcoin = Bitcoin.getInstance();
   }
 }
