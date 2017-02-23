@@ -29,12 +29,13 @@ public class Bootstrap extends HttpServlet {
     Swagger swagger = new Swagger().info(info);
 
     Bitcoin bitcoin = Bitcoin.getInstance();
+    bitcoin.start();
 
     new SwaggerContextService().withServletConfig(config).updateSwagger(swagger);
   }
 
   @Override
   public void destroy() {
-    Bitcoin bitcoin = Bitcoin.getInstance();
+    Bitcoin.getInstance().stop();
   }
 }
