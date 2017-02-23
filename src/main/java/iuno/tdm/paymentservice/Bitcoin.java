@@ -16,7 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package iuno.tdm.payment.service.bitcoin;
+package iuno.tdm.paymentservice;
 
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.NetworkParameters;
@@ -26,6 +26,8 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.slf4j.LoggerFactory;
+import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,15 +37,16 @@ public class Bitcoin {
     final NetworkParameters params = TestNet3Params.get();
 
     private Wallet wallet = null;
-    private BlockChain blockChain = null;
     private PeerGroup peerGroup = null;
-    private File walletFile;
+    private Logger logger;
 
     private static final String PREFIX = "PaymentService";
 
     private static Bitcoin instance;
 
-    private Bitcoin() {}
+    private Bitcoin() {
+        logger = LoggerFactory.getLogger(Bitcoin.class);
+    }
 
     public static synchronized Bitcoin getInstance() {
         if (Bitcoin.instance == null) {
@@ -55,19 +58,19 @@ public class Bitcoin {
     public void start() {
         String homeDir = System.getProperty("user.home");
         File chainFile = new File(homeDir, PREFIX + ".spvchain");
-        walletFile = new File(homeDir, PREFIX + ".wallet");
+        File walletFile = new File(homeDir, PREFIX + ".wallet");
 
         // create new wallet system
         try {
             wallet = Wallet.loadFromFile(walletFile);
         } catch (UnreadableWalletException e) {
-            System.out.println("creating new wallet");
+            logger.warn("creating new wallet");
             wallet = new Wallet(params);
         }
 
         // wallets configuration
         // wallet.allowSpendingUnconfirmedTransactions();
-        printStatus();
+        logStatus();
 
         // auto save wallets at least every five seconds
         try {
@@ -78,6 +81,7 @@ public class Bitcoin {
         }
 
         // initialize blockchain file
+        BlockChain blockChain = null;
         try {
             blockChain = new BlockChain(params, wallet, new SPVBlockStore(params, chainFile));
         } catch (BlockStoreException e) {
@@ -97,13 +101,11 @@ public class Bitcoin {
         wallet.shutdownAutosaveAndWait();
     }
 
-    public void printStatus() {
-        System.out.printf("wallet: %s (%s) %s\n",
-                wallet.getBalance().toFriendlyString(),
-                wallet.getBalance(Wallet.BalanceType.ESTIMATED).toFriendlyString(),
-                wallet.getKeyChainSeed().getMnemonicCode());
-        System.out.printf("wallet receive address: %s\n", wallet.currentReceiveAddress());
-
+    public void logStatus() {
+        logger.info("Balance: " + wallet.getBalance().toFriendlyString());
+        logger.info("Estimated: " + wallet.getBalance(Wallet.BalanceType.ESTIMATED).toFriendlyString());
+        logger.info("Seed: " + wallet.getKeyChainSeed().getMnemonicCode());
+        logger.info("wallet receive address: " + wallet.currentReceiveAddress());
     }
 
     public boolean isRunning() { return (null != peerGroup); }
