@@ -18,10 +18,9 @@
 
 package iuno.tdm.paymentservice;
 
+import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
-import org.bitcoinj.core.BlockChain;
-import org.bitcoinj.core.NetworkParameters;
-import org.bitcoinj.core.PeerGroup;
+import org.bitcoinj.core.*;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
@@ -34,6 +33,7 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -63,7 +63,7 @@ public class Bitcoin {
         return Bitcoin.instance;
     }
 
-    public void start() {
+    public void start() { // TODO: this method must be called once only!
         String homeDir = System.getProperty("user.home");
         File chainFile = new File(homeDir, PREFIX + ".spvchain");
         File walletFile = new File(homeDir, PREFIX + ".wallet");
@@ -123,12 +123,31 @@ public class Bitcoin {
 
     private class BitcoinInvoice {
         private Invoice invoice;
-        BitcoinInvoice(Invoice inv) {
+        private Coin totalAmount = Coin.ZERO;
+        private Date expiration;
+        BitcoinInvoice(Invoice inv) throws IllegalArgumentException {
             // check sanity of invoice
+            totalAmount = Coin.valueOf(inv.getTotalAmount());
+            if (totalAmount.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
+                throw new IllegalArgumentException("invoice amount is less than bitcoin minimum dust output");
+
             // check values (transfer shall be lower than totalamount)
+            Coin transferAmount = Coin.ZERO;
+            for (AddressValuePair avp : inv.getTransfers()) {
+                Coin value = Coin.valueOf(avp.getCoin());
+                if (value.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
+                    throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
+                transferAmount = transferAmount.add(value);
+            }
+            if (totalAmount.isLessThan(transferAmount))
+                throw new IllegalArgumentException("total invoice amount is less than sum of transfer amounts");
+
             // expiration date shall be in the future
+            Date expiration = inv.getExpiration();
+            if (expiration.before(new Date()))
+                throw new IllegalArgumentException("expiration date must be in the future");
+
             invoice = inv;
-//            throw new IllegalArgumentException("some sanity check failed");
         }
     }
 
