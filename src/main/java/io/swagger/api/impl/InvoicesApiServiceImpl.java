@@ -64,8 +64,15 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response getInvoiceBip21(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        UUID id = UUID.fromString(invoiceId);
+        String bip21 = bc.getInvoiceBip21(id);
+        if (null != bip21) {
+            return Response.ok().entity(bip21).build();
+        } else {
+            Error err = new Error();
+            err.setMessage("no invoice found for id " + invoiceId);
+            return Response.status(404).entity(err).build();
+        }
     }
     @Override
     public Response getInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {

@@ -25,6 +25,7 @@ import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
+import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -125,6 +126,7 @@ public class Bitcoin {
         private Invoice invoice;
         private Coin totalAmount = Coin.ZERO;
         private Date expiration;
+        private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
         BitcoinInvoice(Invoice inv) throws IllegalArgumentException {
             // check sanity of invoice
             totalAmount = Coin.valueOf(inv.getTotalAmount());
@@ -148,6 +150,11 @@ public class Bitcoin {
                 throw new IllegalArgumentException("expiration date must be in the future");
 
             invoice = inv;
+            payto = wallet.freshReceiveAddress(); // TODO unused addresses shall be recycled
+        }
+
+        public String getBip21URI() {
+            return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "label", "message");
         }
     }
 
@@ -158,14 +165,21 @@ public class Bitcoin {
         // add invoice to hashMap
         invoiceHashMap.put(invoiceID, bcInvoice);
         logger.info("Added invoice " + invoiceID.toString() + " to hashmap.");
+        logger.info(invoiceID.toString() + ": " + bcInvoice.getBip21URI());
         return invoiceID;
     }
 
-    public Invoice getInvoiceById(UUID id) {
+    public Invoice getInvoiceById(UUID id) { // TODO throw nullpointer dereference exception
         Invoice ret = null;
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         if (null != bcInvoice) ret = bcInvoice.invoice;
         return ret;
     }
 
+    public String getInvoiceBip21(UUID id) { // TODO throw nullpointer dereference exception
+        String ret = null;
+        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
+        if (null != bcInvoice) ret = bcInvoice.getBip21URI();
+        return ret;
+    }
 }
