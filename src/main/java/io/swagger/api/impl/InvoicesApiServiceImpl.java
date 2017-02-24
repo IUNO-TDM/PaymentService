@@ -34,7 +34,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
-        // send service unavailable (503) if bitcoin peergroup io not connected
+        // send service unavailable (503) if bitcoin peergroup is not connected
         if (false == bc.isRunning()) {
             Error err = new Error();
             err.setMessage("Peergroup is unavailable.");
@@ -69,8 +69,15 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response getInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        UUID id = UUID.fromString(invoiceId);
+        Invoice invoice = bc.getInvoiceById(id);
+        if (null != invoice) {
+            return Response.ok().entity(invoice).build();
+        } else {
+            Error err = new Error();
+            err.setMessage("no invoice found for id " + invoiceId);
+            return Response.status(404).entity(err).build();
+        }
     }
     @Override
     public Response getInvoiceCouponBalance(String invoiceId, String couponAddress, SecurityContext securityContext) throws NotFoundException {

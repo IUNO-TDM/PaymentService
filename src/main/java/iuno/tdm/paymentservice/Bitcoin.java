@@ -160,4 +160,12 @@ public class Bitcoin {
         logger.info("Added invoice " + invoiceID.toString() + " to hashmap.");
         return invoiceID;
     }
+
+    public Invoice getInvoiceById(UUID id) {
+        Invoice ret = null;
+        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
+        if (null != bcInvoice) ret = bcInvoice.invoice;
+        return ret;
+    }
+
 }
