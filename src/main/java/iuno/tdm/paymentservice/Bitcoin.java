@@ -28,6 +28,7 @@ import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
@@ -168,6 +169,24 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
             return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
         }
 
+        private void payTransfers() {
+            Transaction tx = new Transaction(params);
+            for (AddressValuePair fwd : invoice.getTransfers()) {
+                Coin value = Coin.valueOf(fwd.getCoin());
+                Address address = Address.fromBase58(params, fwd.getAddress());
+                logger.info("forward " + value.toFriendlyString() + " to " + address.toBase58());
+                tx.addOutput(value, address);
+            }
+            SendRequest sr = SendRequest.forTx(tx);
+            try {
+                wallet.completeTx(sr);
+                wallet.commitTx(sr.tx);
+                peerGroup.broadcastTransaction(sr.tx).broadcast();
+            } catch (InsufficientMoneyException e) {
+                e.printStackTrace();
+            }
+        }
+
         /**
          * Checks all outputs of a transaction for payments to this invoice.
          * @deprecated this is an efficient way that only works for verifying just a few payments per second
@@ -181,6 +200,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                     logger.info("Received payment for invoice " + invoiceId.toString()
                             + " to " + tout.getAddressFromP2PKHScript(params)
                             + " with " + tout.getValue().toFriendlyString());
+                    payTransfers();
                 }
             }
         }
