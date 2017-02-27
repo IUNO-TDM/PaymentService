@@ -31,8 +31,8 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
-import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -128,11 +128,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     }
 
     private class BitcoinInvoice {
+        private UUID invoiceId;
         private Invoice invoice;
         private Coin totalAmount = Coin.ZERO;
         private Date expiration;
         private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
-        BitcoinInvoice(Invoice inv) throws IllegalArgumentException {
+        BitcoinInvoice(UUID id, Invoice inv) throws IllegalArgumentException {
             // check sanity of invoice
             totalAmount = Coin.valueOf(inv.getTotalAmount());
             if (totalAmount.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
@@ -154,24 +155,46 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
             if (expiration.before(new Date()))
                 throw new IllegalArgumentException("expiration date must be in the future");
 
+            invoiceId = id;
             invoice = inv;
             payto = wallet.freshReceiveAddress(); // TODO unused addresses shall be recycled
         }
 
+        /**
+         * Returns a BIP21 payment request string.
+         * @return BIP21 payment request string
+         */
         public String getBip21URI() {
             return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
+        }
+
+        /**
+         * Checks all outputs of a transaction for payments to this invoice.
+         * @deprecated this is an efficient way that only works for verifying just a few payments per second
+         * @param tx new transaction with outputs to be checked
+         */
+        public void checkTxForPayment(Transaction tx) {
+            for (TransactionOutput tout : tx.getOutputs()) {
+                Address dest = tout.getAddressFromP2PKHScript(params);
+                if ((payto.equals(dest))
+                    && (totalAmount.getValue() <= tout.getValue().getValue())) {
+                    logger.info("Received payment for invoice " + invoiceId.toString()
+                            + " to " + tout.getAddressFromP2PKHScript(params)
+                            + " with " + tout.getValue().toFriendlyString());
+                }
+            }
         }
     }
 
     public UUID addInvoice(Invoice inv) {
-        UUID invoiceID = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(inv);
+        UUID invoiceId = UUID.randomUUID();
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv);
 
         // add invoice to hashMap
-        invoiceHashMap.put(invoiceID, bcInvoice);
-        logger.info("Added invoice " + invoiceID.toString() + " to hashmap.");
-        logger.info(invoiceID.toString() + ": " + bcInvoice.getBip21URI());
-        return invoiceID;
+        invoiceHashMap.put(invoiceId, bcInvoice);
+        logger.info("Added invoice " + invoiceId.toString() + " to hashmap.");
+        logger.info(invoiceId.toString() + ": " + bcInvoice.getBip21URI());
+        return invoiceId;
     }
 
     public Invoice getInvoiceById(UUID id) { // TODO throw nullpointer dereference exception
@@ -192,8 +215,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
         Coin value = tx.getValueSentToMe(wallet);
         logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
-        for (TransactionOutput tout : tx.getOutputs()) {
-            logger.info("Output to " + tout.getAddressFromP2PKHScript(params).toBase58() + " with value " + tout.getValue().toFriendlyString());
+        for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
+            bcInvoice.checkTxForPayment(tx); // TODO this is inefficient
         }
     }
 }
