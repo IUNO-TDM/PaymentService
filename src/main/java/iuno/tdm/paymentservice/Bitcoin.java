@@ -21,6 +21,7 @@ package iuno.tdm.paymentservice;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
@@ -29,6 +30,7 @@ import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
@@ -39,7 +41,7 @@ import java.util.HashMap;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin {
+public class Bitcoin implements WalletCoinsReceivedEventListener {
     final NetworkParameters params = TestNet3Params.get();
 
     private Wallet wallet = null;
@@ -78,7 +80,9 @@ public class Bitcoin {
         }
 
         // wallets configuration
+        if (!chainFile.exists()) wallet.reset(); // reset wallet if chainfile does not exist
         // wallet.allowSpendingUnconfirmedTransactions();
+        wallet.addCoinsReceivedEventListener(this);
         logStatus();
 
         // auto save wallets at least every five seconds
@@ -104,6 +108,7 @@ public class Bitcoin {
 
         peerGroup.startAsync();
         peerGroup.addPeerDiscovery(new DnsDiscovery(params));
+        peerGroup.startBlockChainDownload(new DownloadProgressTracker());
     }
 
     public void stop() {
@@ -154,7 +159,7 @@ public class Bitcoin {
         }
 
         public String getBip21URI() {
-            return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "label", "message");
+            return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
         }
     }
 
@@ -181,5 +186,14 @@ public class Bitcoin {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         if (null != bcInvoice) ret = bcInvoice.getBip21URI();
         return ret;
+    }
+
+    @Override
+    public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
+        Coin value = tx.getValueSentToMe(wallet);
+        logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
+        for (TransactionOutput tout : tx.getOutputs()) {
+            logger.info("Output to " + tout.getAddressFromP2PKHScript(params).toBase58() + " with value " + tout.getValue().toFriendlyString());
+        }
     }
 }
