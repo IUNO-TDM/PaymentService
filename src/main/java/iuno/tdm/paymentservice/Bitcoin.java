@@ -32,22 +32,23 @@ import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
+import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener {
     final NetworkParameters params = TestNet3Params.get();
+    final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
     private PeerGroup peerGroup = null;
     private Logger logger;
+    private DateTime lastCleanup = DateTime.now();
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
@@ -244,11 +245,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
      * Removes all expired invoices.
      */
     private void cleanUpInvoices() {
-        for (UUID id : invoiceHashMap.keySet()) {
+        List<UUID> ids = new ArrayList();
+        for (UUID id : invoiceHashMap.keySet()) { // get expired invoices...
             if (invoiceHashMap.get(id).isExpired()) {
-                invoiceHashMap.remove(id);
+                ids.add(id);
             }
         }
+        for (UUID id : ids) { // ...and remove them all
+            invoiceHashMap.remove(id);
+            logger.info("Removed expired invoice with id " + id.toString());
+        }
+        lastCleanup = DateTime.now();
     }
 
     @Override
@@ -257,6 +264,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
             bcInvoice.checkTxForPayment(tx); // TODO this is inefficient
+        }
+
+        if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
+            cleanUpInvoices();
         }
     }
 }
