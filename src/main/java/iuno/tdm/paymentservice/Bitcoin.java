@@ -153,13 +153,21 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                 throw new IllegalArgumentException("total invoice amount is less than sum of transfer amounts");
 
             // expiration date shall be in the future
-            Date expiration = inv.getExpiration();
-            if (expiration.before(new Date()))
+            expiration = inv.getExpiration();
+            if (isExpired())
                 throw new IllegalArgumentException("expiration date must be in the future");
 
             invoiceId = id;
             invoice = inv;
             payto = wallet.freshReceiveAddress(); // TODO unused addresses shall be recycled
+        }
+
+        /**
+         * Checks if the invoice is expired.
+         * @return true if invoice is expired
+         */
+        boolean isExpired() {
+            return (expiration.before(new Date()));
         }
 
         /**
@@ -230,6 +238,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public String getInvoiceBip21(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).getBip21URI();
+    }
+
+    /**
+     * Removes all expired invoices.
+     */
+    private void cleanUpInvoices() {
+        for (UUID id : invoiceHashMap.keySet()) {
+            if (invoiceHashMap.get(id).isExpired()) {
+                invoiceHashMap.remove(id);
+            }
+        }
     }
 
     @Override
