@@ -133,6 +133,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         private Invoice invoice;
         private Coin totalAmount = Coin.ZERO;
         private Date expiration;
+        private TransactionInput txin;
         private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
         BitcoinInvoice(UUID id, Invoice inv) throws IllegalArgumentException {
             // check sanity of invoice
@@ -171,6 +172,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
         private void payTransfers() {
             Transaction tx = new Transaction(params);
+            tx.addInput(txin);
             for (AddressValuePair fwd : invoice.getTransfers()) {
                 Coin value = Coin.valueOf(fwd.getCoin());
                 Address address = Address.fromBase58(params, fwd.getAddress());
@@ -200,6 +202,11 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                     logger.info("Received payment for invoice " + invoiceId.toString()
                             + " to " + tout.getAddressFromP2PKHScript(params)
                             + " with " + tout.getValue().toFriendlyString());
+                    int index = tout.getIndex();
+                    TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
+                    byte[] script = tout.getScriptBytes();
+                    txin = new TransactionInput(params, tx, script, txOutpoint);
+                    txin.clearScriptBytes();
                     payTransfers();
                 }
             }
