@@ -224,18 +224,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         return invoiceId;
     }
 
-    public Invoice getInvoiceById(UUID id) { // TODO throw nullpointer dereference exception
-        Invoice ret = null;
-        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
-        if (null != bcInvoice) ret = bcInvoice.invoice;
-        return ret;
+    public Invoice getInvoiceById(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).invoice;
     }
 
-    public String getInvoiceBip21(UUID id) { // TODO throw nullpointer dereference exception
-        String ret = null;
-        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
-        if (null != bcInvoice) ret = bcInvoice.getBip21URI();
-        return ret;
+    public String getInvoiceBip21(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).getBip21URI();
     }
 
     @Override

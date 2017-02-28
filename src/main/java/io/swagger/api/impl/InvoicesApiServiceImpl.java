@@ -20,6 +20,7 @@ import java.util.UUID;
 import iuno.tdm.paymentservice.Bitcoin;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
+import javax.validation.constraints.Null;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
@@ -65,10 +66,11 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceBip21(String invoiceId, SecurityContext securityContext) throws NotFoundException {
         UUID id = UUID.fromString(invoiceId);
-        String bip21 = bc.getInvoiceBip21(id);
-        if (null != bip21) {
+        try {
+            String bip21 = bc.getInvoiceBip21(id);
             return Response.ok().entity(bip21).build();
-        } else {
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
             return Response.status(404).entity(err).build();
@@ -77,10 +79,11 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {
         UUID id = UUID.fromString(invoiceId);
-        Invoice invoice = bc.getInvoiceById(id);
-        if (null != invoice) {
+        try {
+            Invoice invoice = bc.getInvoiceById(id);
             return Response.ok().entity(invoice).build();
-        } else {
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
             return Response.status(404).entity(err).build();
