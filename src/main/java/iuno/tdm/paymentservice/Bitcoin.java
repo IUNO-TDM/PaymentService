@@ -18,7 +18,6 @@
 
 package iuno.tdm.paymentservice;
 
-import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
@@ -26,9 +25,7 @@ import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
-import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
@@ -38,7 +35,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener {
@@ -129,102 +129,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         return ((null != peerGroup) && (0 < peerGroup.numConnectedPeers()));
     }
 
-    private class BitcoinInvoice {
-        private UUID invoiceId;
-        private Invoice invoice;
-        private Coin totalAmount = Coin.ZERO;
-        private Date expiration;
-        private TransactionInput txin;
-        private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
-        BitcoinInvoice(UUID id, Invoice inv) throws IllegalArgumentException {
-            // check sanity of invoice
-            totalAmount = Coin.valueOf(inv.getTotalAmount());
-            if (totalAmount.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
-                throw new IllegalArgumentException("invoice amount is less than bitcoin minimum dust output");
-
-            // check values (transfer shall be lower than totalamount)
-            Coin transferAmount = Coin.ZERO;
-            for (AddressValuePair avp : inv.getTransfers()) {
-                Coin value = Coin.valueOf(avp.getCoin());
-                if (value.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
-                    throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
-                transferAmount = transferAmount.add(value);
-            }
-            if (totalAmount.isLessThan(transferAmount))
-                throw new IllegalArgumentException("total invoice amount is less than sum of transfer amounts");
-
-            // expiration date shall be in the future
-            expiration = inv.getExpiration();
-            if (isExpired())
-                throw new IllegalArgumentException("expiration date must be in the future");
-
-            invoiceId = id;
-            invoice = inv;
-            payto = wallet.freshReceiveAddress(); // TODO unused addresses shall be recycled
-        }
-
-        /**
-         * Checks if the invoice is expired.
-         * @return true if invoice is expired
-         */
-        boolean isExpired() {
-            return (expiration.before(new Date()));
-        }
-
-        /**
-         * Returns a BIP21 payment request string.
-         * @return BIP21 payment request string
-         */
-        public String getBip21URI() {
-            return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
-        }
-
-        private void payTransfers() {
-            Transaction tx = new Transaction(params);
-            tx.addInput(txin);
-            for (AddressValuePair fwd : invoice.getTransfers()) {
-                Coin value = Coin.valueOf(fwd.getCoin());
-                Address address = Address.fromBase58(params, fwd.getAddress());
-                logger.info("forward " + value.toFriendlyString() + " to " + address.toBase58());
-                tx.addOutput(value, address);
-            }
-            SendRequest sr = SendRequest.forTx(tx);
-            try {
-                wallet.completeTx(sr);
-                wallet.commitTx(sr.tx);
-                peerGroup.broadcastTransaction(sr.tx).broadcast();
-            } catch (InsufficientMoneyException e) {
-                e.printStackTrace();
-            }
-        }
-
-        /**
-         * Checks all outputs of a transaction for payments to this invoice.
-         * @deprecated this is an efficient way that only works for verifying just a few payments per second
-         * @param tx new transaction with outputs to be checked
-         */
-        public void checkTxForPayment(Transaction tx) {
-            for (TransactionOutput tout : tx.getOutputs()) {
-                Address dest = tout.getAddressFromP2PKHScript(params);
-                if ((payto.equals(dest))
-                    && (totalAmount.getValue() <= tout.getValue().getValue())) {
-                    logger.info("Received payment for invoice " + invoiceId.toString()
-                            + " to " + tout.getAddressFromP2PKHScript(params)
-                            + " with " + tout.getValue().toFriendlyString());
-                    int index = tout.getIndex();
-                    TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
-                    byte[] script = tout.getScriptBytes();
-                    txin = new TransactionInput(params, tx, script, txOutpoint);
-                    txin.clearScriptBytes();
-                    payTransfers();
-                }
-            }
-        }
-    }
-
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet, peerGroup);
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
