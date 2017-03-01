@@ -241,6 +241,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         return invoiceHashMap.get(id).getBip21URI();
     }
 
+    public void deleteInvoiceById(UUID id) throws NullPointerException {
+        invoiceHashMap.remove(id);
+    }
+
     /**
      * Removes all expired invoices.
      */

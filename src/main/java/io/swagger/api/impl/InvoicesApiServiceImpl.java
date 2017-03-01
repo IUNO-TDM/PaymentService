@@ -60,8 +60,16 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response deleteInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        UUID id = UUID.fromString(invoiceId);
+        try {
+            bc.deleteInvoiceById(id);
+            return Response.ok().entity("invoice deleted").build();
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            Error err = new Error();
+            err.setMessage("no invoice found for id " + invoiceId);
+            return Response.status(404).entity(err).build();
+        }
     }
     @Override
     public Response getInvoiceBip21(String invoiceId, SecurityContext securityContext) throws NotFoundException {
