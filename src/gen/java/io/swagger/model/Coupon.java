@@ -20,7 +20,7 @@ import io.swagger.annotations.ApiModel;
  * Bip38 encoded Bitcoin private key
  */
 @ApiModel(description = "Bip38 encoded Bitcoin private key")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-02-20T13:03:48.706Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
 public class Coupon   {
 
   @Override

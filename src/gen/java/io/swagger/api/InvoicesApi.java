@@ -30,7 +30,7 @@ import javax.ws.rs.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-02-20T13:03:48.706Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
@@ -139,6 +139,20 @@ public class InvoicesApi  {
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.getInvoiceCoupons(invoiceId,securityContext);
+    }
+    @GET
+    @Path("/{invoiceId}/transfers")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json" })
+    @io.swagger.annotations.ApiOperation(value = "Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.", notes = "", response = AddressValuePair.class, responseContainer = "List", tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the address value pairs for the invoice as array", response = AddressValuePair.class, responseContainer = "List"),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = AddressValuePair.class, responseContainer = "List") })
+    public Response getInvoiceTransfers(@ApiParam(value = "the invoice id to get transfers for",required=true) @PathParam("invoiceId") String invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getInvoiceTransfers(invoiceId,securityContext);
     }
     @GET
     

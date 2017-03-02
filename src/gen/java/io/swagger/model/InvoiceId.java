@@ -20,7 +20,7 @@ import io.swagger.annotations.ApiModel;
  * unique invoice id
  */
 @ApiModel(description = "unique invoice id")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-02-20T13:03:48.706Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
 public class InvoiceId   {
 
   @Override
