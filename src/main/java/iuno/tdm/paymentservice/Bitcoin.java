@@ -132,7 +132,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), peerGroup);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress());
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);

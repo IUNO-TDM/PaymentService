@@ -35,14 +35,13 @@ import java.util.UUID;
 class BitcoinInvoice {
     final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private UUID invoiceId;
-    private PeerGroup peerGroup; // TODO: check if this really is a good idea
     private Coin totalAmount = Coin.ZERO;
     private Date expiration;
     private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     Invoice invoice;
     private Logger logger;
 
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, PeerGroup pg) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         // check sanity of invoice
         totalAmount = Coin.valueOf(inv.getTotalAmount());
@@ -65,7 +64,6 @@ class BitcoinInvoice {
         if (isExpired())
             throw new IllegalArgumentException("expiration date must be in the future");
 
-        peerGroup = pg;
         invoiceId = id;
         invoice = inv;
         payto = addr;
