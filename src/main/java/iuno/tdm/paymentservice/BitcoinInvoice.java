@@ -27,6 +27,7 @@ import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.util.Date;
 import java.util.UUID;
 
@@ -37,7 +38,6 @@ class BitcoinInvoice {
     private PeerGroup peerGroup; // TODO: check if this really is a good idea
     private Coin totalAmount = Coin.ZERO;
     private Date expiration;
-    private TransactionInput txin;
     private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     Invoice invoice;
     private Logger logger;
@@ -88,23 +88,16 @@ class BitcoinInvoice {
         return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
     }
 
-    private void payTransfers() {
+    private SendRequest payTransfers(@Nullable TransactionInput txin) {
         Transaction tx = new Transaction(params);
-        tx.addInput(txin);
+        if (null != txin) tx.addInput(txin);
         for (AddressValuePair fwd : invoice.getTransfers()) {
             Coin value = Coin.valueOf(fwd.getCoin());
             Address address = Address.fromBase58(params, fwd.getAddress());
             logger.info("forward " + value.toFriendlyString() + " to " + address.toBase58());
             tx.addOutput(value, address);
         }
-        SendRequest sr = SendRequest.forTx(tx);
-        try {
-            wallet.completeTx(sr);
-            wallet.commitTx(sr.tx);
-            peerGroup.broadcastTransaction(sr.tx).broadcast();
-        } catch (InsufficientMoneyException e) {
-            e.printStackTrace();
-        }
+        return SendRequest.forTx(tx);
     }
 
     /**
@@ -123,9 +116,17 @@ class BitcoinInvoice {
                 int index = tout.getIndex();
                 TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
                 byte[] script = tout.getScriptBytes();
+                TransactionInput txin; // TODO check if script needs to contain something
                 txin = new TransactionInput(params, tx, script, txOutpoint);
                 txin.clearScriptBytes();
-                payTransfers();
+                SendRequest sr = payTransfers(txin);
+                try {
+                    wallet.completeTx(sr);
+                    wallet.commitTx(sr.tx);
+                    peerGroup.broadcastTransaction(sr.tx).broadcast();
+                } catch (InsufficientMoneyException e) {
+                    e.printStackTrace();
+                }
             }
         }
     }
