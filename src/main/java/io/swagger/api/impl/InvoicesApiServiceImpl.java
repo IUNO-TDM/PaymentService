@@ -24,7 +24,7 @@ import javax.validation.constraints.Null;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-02-20T13:03:48.706Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private final Bitcoin bc = Bitcoin.getInstance();
 
@@ -105,6 +105,11 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response getInvoiceCoupons(String invoiceId, SecurityContext securityContext) throws NotFoundException {
+        // do some magic!
+        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+    }
+    @Override
+    public Response getInvoiceTransfers(String invoiceId, SecurityContext securityContext) throws NotFoundException {
         // do some magic!
         return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
     }
