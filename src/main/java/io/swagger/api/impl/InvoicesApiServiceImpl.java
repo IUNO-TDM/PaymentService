@@ -65,6 +65,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             bc.deleteInvoiceById(id);
             return Response.ok().entity("invoice deleted").build();
 
+        // TODO: there will be no NullPointerException - remove on a hashmap will always succeed
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
