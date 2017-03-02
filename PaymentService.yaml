@@ -112,7 +112,28 @@ paths:
           schema:
             type: string
 
-# TODO: transfer object interface needed
+  /invoices/{invoiceId}/transfers:
+    get:
+      summary: Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
+      operationId: getInvoiceTransfers
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the invoice id to get transfers for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the address value pairs for the invoice as array
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/AddressValuePair'
+
 # TODO: invoice state information interface needed
 
   /invoices/{invoiceId}/coupons:
