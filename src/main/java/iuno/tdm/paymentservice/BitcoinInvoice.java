@@ -23,18 +23,18 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.UUID;
 
 class BitcoinInvoice {
     final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private UUID invoiceId;
-    private Wallet wallet; // TODO: check if this really is a good idea
     private PeerGroup peerGroup; // TODO: check if this really is a good idea
     private Coin totalAmount = Coin.ZERO;
     private Date expiration;
@@ -42,7 +42,7 @@ class BitcoinInvoice {
     Invoice invoice;
     private Logger logger;
 
-    BitcoinInvoice(UUID id, Invoice inv, Wallet w, PeerGroup pg) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, PeerGroup pg) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         // check sanity of invoice
         totalAmount = Coin.valueOf(inv.getTotalAmount());
@@ -65,11 +65,10 @@ class BitcoinInvoice {
         if (isExpired())
             throw new IllegalArgumentException("expiration date must be in the future");
 
-        wallet = w;
         peerGroup = pg;
         invoiceId = id;
         invoice = inv;
-        payto = wallet.freshReceiveAddress(); // TODO unused addresses shall be recycled
+        payto = addr;
     }
 
     /**
@@ -105,7 +104,8 @@ class BitcoinInvoice {
      * @deprecated this is an efficient way that only works for verifying just a few payments per second
      * @param tx new transaction with outputs to be checked
      */
-    public void checkTxForPayment(Transaction tx) {
+    public List<SendRequest> checkTxForPayment(Transaction tx) {
+        List<SendRequest> result = new ArrayList<>();
         for (TransactionOutput tout : tx.getOutputs()) {
             Address dest = tout.getAddressFromP2PKHScript(params);
             if ((payto.equals(dest))
@@ -119,15 +119,9 @@ class BitcoinInvoice {
                 TransactionInput txin; // TODO check if script needs to contain something
                 txin = new TransactionInput(params, tx, script, txOutpoint);
                 txin.clearScriptBytes();
-                SendRequest sr = payTransfers(txin);
-                try {
-                    wallet.completeTx(sr);
-                    wallet.commitTx(sr.tx);
-                    peerGroup.broadcastTransaction(sr.tx).broadcast();
-                } catch (InsufficientMoneyException e) {
-                    e.printStackTrace();
-                }
+                result.add(payTransfers(txin));
             }
         }
+        return result;
     }
 }

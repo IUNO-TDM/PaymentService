@@ -26,6 +26,7 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
@@ -131,7 +132,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet, peerGroup);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), peerGroup);
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -174,7 +175,16 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         Coin value = tx.getValueSentToMe(wallet);
         logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
-            bcInvoice.checkTxForPayment(tx); // TODO this is inefficient
+            List<SendRequest> list = bcInvoice.checkTxForPayment(tx); // TODO this is inefficient
+            for (SendRequest sr : list) {
+                try {
+                    wallet.completeTx(sr);
+                    wallet.commitTx(sr.tx);
+                    peerGroup.broadcastTransaction(sr.tx).broadcast();
+                } catch (InsufficientMoneyException e) {
+                    e.printStackTrace();
+                }
+            }
         }
 
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
