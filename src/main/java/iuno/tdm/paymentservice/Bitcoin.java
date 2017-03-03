@@ -20,7 +20,6 @@ package iuno.tdm.paymentservice;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import org.bitcoinj.core.*;
@@ -196,8 +195,11 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         Coin value = tx.getValueSentToMe(wallet);
         logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
-            List<SendRequest> list = bcInvoice.checkTxForPayment(tx); // TODO this is inefficient
-            for (SendRequest sr : list) {
+            bcInvoice.sortOutputsToAddresses(tx);
+            bcInvoice.updatePaymentConfidences();
+
+            SendRequest sr = bcInvoice.tryFinishInvoice();
+            if (null != sr) {
                 try {
                     wallet.completeTx(sr);
                     wallet.commitTx(sr.tx);
@@ -208,6 +210,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
             }
         }
 
+        // cleanup expired transactions
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }

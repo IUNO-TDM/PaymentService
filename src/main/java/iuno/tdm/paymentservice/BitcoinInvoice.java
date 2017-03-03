@@ -38,6 +38,66 @@ class BitcoinInvoice {
     Invoice invoice;
     private Logger logger;
     private Coin transferAmount = Coin.ZERO;
+    boolean finished = false;
+
+    class PayedAddress {
+        Address address;
+        Coin targetValue;
+        Coin receivedValue;
+        Vector<TransactionOutput> transactionOutputs = new Vector<>();
+
+        PayedAddress(Address a, Coin target) {
+            address = a;
+            targetValue = target;
+            receivedValue = Coin.ZERO;
+        }
+
+        void addTransaction(TransactionOutput txOut) {
+            transactionOutputs.add(txOut);
+        }
+
+        void updateReceivedValues() { // TODO: maybe it would be a good idea to call back this by a transaction confidence listener
+            Coin recvd = Coin.ZERO;
+            for (TransactionOutput txOut : transactionOutputs) {
+                TransactionConfidence confidence = txOut.getParentTransaction().getConfidence();
+                switch (confidence.getConfidenceType()) {
+                    case BUILDING:
+                    case PENDING:
+//                        if (txOut.isAvailableForSpending()) // would be available, not received
+                            recvd = recvd.add(txOut.getValue());
+                    case DEAD:
+                    case IN_CONFLICT:
+                    case UNKNOWN:
+                    default:
+                        logger.info("Transaction " + txOut.getParentTransactionHash().toString() + " has confidence type "
+                        + confidence.toString() + ".");
+                }
+            }
+            receivedValue = recvd;
+        }
+
+        Set<TransactionInput> getInputs() {
+            Set<TransactionInput> inputs = new HashSet<>();
+            for (TransactionOutput tout : transactionOutputs) {
+                if (tout.isAvailableForSpending()) {
+                    int index = tout.getIndex();
+                    Transaction tx = tout.getParentTransaction();
+                    TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
+                    byte[] script = tout.getScriptBytes();
+                    TransactionInput txin; // TODO check if script needs to contain something
+                    txin = new TransactionInput(params, tx, script, txOutpoint);
+                    txin.clearScriptBytes();
+                    inputs.add(txin);
+                }
+            }
+            return inputs;
+        }
+
+        boolean isComplete() {
+            return ! (targetValue.subtract(receivedValue).isPositive());
+        }
+    }
+    HashMap<Address, PayedAddress> payedAddresses = new HashMap<>();
 
     BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
@@ -48,10 +108,12 @@ class BitcoinInvoice {
 
         // check values (transfer shall be lower than totalamount)
         for (AddressValuePair avp : inv.getTransfers()) {
+            Address a = Address.fromBase58(params, avp.getAddress());
             Coin value = Coin.valueOf(avp.getCoin());
             if (value.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
                 throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
             transferAmount = transferAmount.add(value);
+            payedAddresses.put(a, new PayedAddress(a, value));
         }
         if (totalAmount.isLessThan(transferAmount))
             throw new IllegalArgumentException("total invoice amount is less than sum of transfer amounts");
@@ -64,6 +126,8 @@ class BitcoinInvoice {
         invoiceId = id;
         invoice = inv;
         payto = addr;
+
+        payedAddresses.put(payto, new PayedAddress(payto, transferAmount));
     }
 
     /**
@@ -112,29 +176,74 @@ class BitcoinInvoice {
         return SendRequest.forTx(tx);
     }
 
+    public SendRequest tryFinishInvoice() {
+        if (finished) {
+            logger.info("Invoice is already finished.");
+            return null;
+        }
+
+        SendRequest sr = null;
+        synchronized (this) {
+            boolean alreadyComplete = true;
+            Coin transferAmount = Coin.ZERO;
+            Coin ownAmount = Coin.ZERO;
+            Transaction tx = new Transaction(params);
+
+            // transfers complete incl. payto minus transfer amount -> finished
+            for (PayedAddress pa : payedAddresses.values()) {
+                pa.updateReceivedValues();
+                if (payto.equals(pa.address)) {
+                    ownAmount = pa.receivedValue;
+                    if (totalAmount.subtract(this.transferAmount.add(ownAmount)).isPositive()) {
+                        alreadyComplete = false;
+                        break;
+                    } else {
+                        for (TransactionInput txIn : pa.getInputs()) {
+                            tx.addInput(txIn);
+                        }
+                    }
+                } else { // not the own payto address
+                    if (!pa.isComplete()) {
+                        alreadyComplete = false;
+                        transferAmount = transferAmount.add(pa.receivedValue);
+                        tx.addOutput(pa.targetValue.subtract(pa.receivedValue), pa.address);
+                    }
+                }
+            }
+
+            // transfers incomplete but payto >= totalAmount -> create finishing transaction
+            if ((!alreadyComplete) && !(totalAmount.subtract(ownAmount.add(transferAmount)).isPositive())) {
+                sr = SendRequest.forTx(tx);
+                alreadyComplete = true;
+            }
+
+            // eventually mark this invoice as finished
+            if (alreadyComplete) finished = true;
+
+        }
+        return sr;
+    }
+
     /**
      * Checks all outputs of a transaction for payments to this invoice.
-     * @deprecated this is an efficient way that only works for verifying just a few payments per second
+     * @deprecated this is an inefficient way that only works for verifying just a few payments per second
      * @param tx new transaction with outputs to be checked
      */
-    public List<SendRequest> checkTxForPayment(Transaction tx) {
-        List<SendRequest> result = new ArrayList<>();
+    public void sortOutputsToAddresses(Transaction tx) {
         for (TransactionOutput tout : tx.getOutputs()) {
             Address dest = tout.getAddressFromP2PKHScript(params);
-            if ((payto.equals(dest))
-                    && (totalAmount.getValue() <= tout.getValue().getValue())) {
+            if (payedAddresses.containsKey(dest)) {
+                payedAddresses.get(dest).addTransaction(tout);
                 logger.info("Received payment for invoice " + invoiceId.toString()
                         + " to " + tout.getAddressFromP2PKHScript(params)
                         + " with " + tout.getValue().toFriendlyString());
-                int index = tout.getIndex();
-                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
-                byte[] script = tout.getScriptBytes();
-                TransactionInput txin; // TODO check if script needs to contain something
-                txin = new TransactionInput(params, tx, script, txOutpoint);
-                txin.clearScriptBytes();
-                result.add(payTransfers(txin));
             }
         }
-        return result;
+    }
+
+    public void updatePaymentConfidences() {
+        for (PayedAddress pa : payedAddresses.values()) {
+            pa.updateReceivedValues();
+        }
     }
 }
