@@ -27,10 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 class BitcoinInvoice {
     final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
@@ -40,6 +37,7 @@ class BitcoinInvoice {
     private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     Invoice invoice;
     private Logger logger;
+    private Coin transferAmount = Coin.ZERO;
 
     BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
@@ -49,7 +47,6 @@ class BitcoinInvoice {
             throw new IllegalArgumentException("invoice amount is less than bitcoin minimum dust output");
 
         // check values (transfer shall be lower than totalamount)
-        Coin transferAmount = Coin.ZERO;
         for (AddressValuePair avp : inv.getTransfers()) {
             Coin value = Coin.valueOf(avp.getCoin());
             if (value.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
@@ -81,8 +78,26 @@ class BitcoinInvoice {
      * Returns a BIP21 payment request string.
      * @return BIP21 payment request string
      */
-    public String getBip21URI() {
+    String getBip21URI() {
         return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
+    }
+
+    /**
+     * Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
+     * @return the address value/pairs for the invoice as array
+     */
+    List<AddressValuePair> getTransfers() {
+        List<AddressValuePair> transfers = new Vector<>();
+
+        transfers.add(new AddressValuePair().address(payto.toBase58()).coin(totalAmount.longValue()));
+        return transfers;
+
+// TODO this is there for later:
+//        transfers.addAll(invoice.getTransfers());
+//        Coin difference = totalAmount.subtract(transferAmount);
+//        if (difference.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT))
+//            transfers.add(new AddressValuePair().address(payto.toBase58()).coin(difference.longValue()));
+//        return transfers;
     }
 
     private SendRequest payTransfers(@Nullable TransactionInput txin) {

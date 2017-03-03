@@ -18,6 +18,7 @@
 
 package iuno.tdm.paymentservice;
 
+import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
@@ -137,7 +138,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
         logger.info("Added invoice " + invoiceId.toString() + " to hashmap.");
-        logger.info(invoiceId.toString() + ": " + bcInvoice.getBip21URI());
+        logger.info(invoiceId.toString() + " - " + bcInvoice.getBip21URI());
         return invoiceId;
     }
 
@@ -147,6 +148,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public String getInvoiceBip21(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).getBip21URI();
+    }
+
+    public List<AddressValuePair> getInvoiceTransfers(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).getTransfers();
     }
 
     public void deleteInvoiceById(UUID id) {
