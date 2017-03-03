@@ -18,6 +18,9 @@
 
 package iuno.tdm.paymentservice;
 
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import org.bitcoinj.core.*;
@@ -35,6 +38,7 @@ import org.joda.time.DateTime;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -110,9 +114,21 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         peerGroup = new PeerGroup(params, blockChain);
         peerGroup.addWallet(wallet);
 
-        peerGroup.startAsync();
+        Futures.addCallback(peerGroup.startAsync(), new FutureCallback() {
+                    @Override
+                    public void onSuccess(@Nullable Object o) {
+                        logger.info("peer group finished starting");
+                        peerGroup.connectToLocalHost();
+                        peerGroup.startBlockChainDownload(new DownloadProgressTracker());
+                    }
+
+                    @Override
+                    public void onFailure(Throwable throwable) {
+
+                    }
+                }
+        );
         peerGroup.addPeerDiscovery(new DnsDiscovery(params));
-        peerGroup.startBlockChainDownload(new DownloadProgressTracker());
     }
 
     public void stop() {
