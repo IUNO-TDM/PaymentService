@@ -26,7 +26,6 @@ import org.bitcoinj.wallet.SendRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.annotation.Nullable;
 import java.util.*;
 
 class BitcoinInvoice {
@@ -152,33 +151,16 @@ class BitcoinInvoice {
      */
     List<AddressValuePair> getTransfers() {
         List<AddressValuePair> transfers = new Vector<>();
-
-        transfers.add(new AddressValuePair().address(payto.toBase58()).coin(totalAmount.longValue()));
+        transfers.addAll(invoice.getTransfers());
+        Coin difference = totalAmount.subtract(transferAmount);
+        if (difference.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT))
+            transfers.add(new AddressValuePair().address(payto.toBase58()).coin(difference.longValue()));
         return transfers;
-
-// TODO this is there for later:
-//        transfers.addAll(invoice.getTransfers());
-//        Coin difference = totalAmount.subtract(transferAmount);
-//        if (difference.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT))
-//            transfers.add(new AddressValuePair().address(payto.toBase58()).coin(difference.longValue()));
-//        return transfers;
-    }
-
-    private SendRequest payTransfers(@Nullable TransactionInput txin) {
-        Transaction tx = new Transaction(params);
-        if (null != txin) tx.addInput(txin);
-        for (AddressValuePair fwd : invoice.getTransfers()) {
-            Coin value = Coin.valueOf(fwd.getCoin());
-            Address address = Address.fromBase58(params, fwd.getAddress());
-            logger.info("forward " + value.toFriendlyString() + " to " + address.toBase58());
-            tx.addOutput(value, address);
-        }
-        return SendRequest.forTx(tx);
     }
 
     public SendRequest tryFinishInvoice() {
         if (finished) {
-            logger.info("Invoice is already finished.");
+            logger.info("Invoice " + invoiceId.toString() + " is already finished.");
             return null;
         }
 
@@ -218,7 +200,10 @@ class BitcoinInvoice {
             }
 
             // eventually mark this invoice as finished
-            if (alreadyComplete) finished = true;
+            if (alreadyComplete) {
+                logger.info("Invoice " + invoiceId.toString() + " is now finished.");
+                finished = true;
+            }
 
         }
         return sr;
