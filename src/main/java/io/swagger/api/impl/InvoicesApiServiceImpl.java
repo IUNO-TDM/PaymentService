@@ -22,6 +22,7 @@ import iuno.tdm.paymentservice.Bitcoin;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import javax.validation.constraints.Null;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
@@ -64,7 +65,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         UUID id = UUID.fromString(invoiceId);
         try {
             bc.deleteInvoiceById(id);
-            return Response.ok().entity("invoice deleted").build();
+            return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
         // TODO: there will be no NullPointerException - remove on a hashmap will always succeed
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -78,7 +79,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         UUID id = UUID.fromString(invoiceId);
         try {
             String bip21 = bc.getInvoiceBip21(id);
-            return Response.ok().entity(bip21).build();
+            return Response.ok().entity(bip21).type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
