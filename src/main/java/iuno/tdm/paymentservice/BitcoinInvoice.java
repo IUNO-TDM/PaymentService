@@ -32,16 +32,20 @@ class BitcoinInvoice {
     final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private UUID invoiceId;
     private Coin totalAmount = Coin.ZERO;
+    private Coin receivedAmount = Coin.ZERO;
+    private Coin transferAmount = Coin.ZERO;
+    private Coin spendableAmount = Coin.ZERO;
+    private boolean transfersFulfilled = false;
+
     private Date expiration;
     private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     Invoice invoice;
     private Logger logger;
-    private Coin transferAmount = Coin.ZERO;
     boolean finished = false;
 
     class PayedAddress {
         Address address;
-        Coin targetValue;
+        final Coin targetValue;
         Coin receivedValue;
         Vector<TransactionOutput> transactionOutputs = new Vector<>();
 
@@ -56,14 +60,15 @@ class BitcoinInvoice {
         }
 
         void updateReceivedValues() { // TODO: maybe it would be a good idea to call back this by a transaction confidence listener
-            Coin recvd = Coin.ZERO;
+            long received = 0;
             for (TransactionOutput txOut : transactionOutputs) {
+                if ( ! txOut.isAvailableForSpending()) continue; // only count unspent outputs
                 TransactionConfidence confidence = txOut.getParentTransaction().getConfidence();
                 switch (confidence.getConfidenceType()) {
                     case BUILDING:
                     case PENDING:
 //                        if (txOut.isAvailableForSpending()) // would be available, not received
-                            recvd = recvd.add(txOut.getValue());
+                            received += txOut.getValue().getValue();
                     case DEAD:
                     case IN_CONFLICT:
                     case UNKNOWN:
@@ -72,13 +77,13 @@ class BitcoinInvoice {
                         + confidence.toString() + ".");
                 }
             }
-            receivedValue = recvd;
+            receivedValue = Coin.valueOf(received);
         }
 
         Set<TransactionInput> getInputs() {
             Set<TransactionInput> inputs = new HashSet<>();
             for (TransactionOutput tout : transactionOutputs) {
-                if (tout.isAvailableForSpending()) {
+                if (tout.isAvailableForSpending()) { // TODO should be checked with isMine()...
                     int index = tout.getIndex();
                     Transaction tx = tout.getParentTransaction();
                     TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
@@ -92,12 +97,19 @@ class BitcoinInvoice {
             return inputs;
         }
 
-        boolean isComplete() {
-            return ! (targetValue.subtract(receivedValue).isPositive());
+        boolean isInComplete() {
+            return (targetValue.subtract(receivedValue).isPositive());
         }
     }
-    HashMap<Address, PayedAddress> payedAddresses = new HashMap<>();
+    HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
 
+    /**
+     * This constructor checks a new invoice for sanity.
+     * @param id unique id of invoice object
+     * @param inv invoice as defined in restful api
+     * @param addr address for incoming payment (likely the payments service own wallet)
+     * @throws IllegalArgumentException
+     */
     BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         // check sanity of invoice
@@ -158,54 +170,64 @@ class BitcoinInvoice {
         return transfers;
     }
 
+    synchronized void updateValues() {
+        long received = 0;
+        long spendable = 0;
+        boolean tf = true;
+
+        for (PayedAddress pa : payedAddresses.values()) {
+            pa.updateReceivedValues();
+            if (payto.equals(pa.address)) {
+                spendable += pa.receivedValue.getValue();
+                received += pa.receivedValue.getValue();
+            } else {
+                received += Math.min(pa.receivedValue.getValue(), pa.targetValue.getValue());
+                if (pa.isInComplete()) tf = false;
+            }
+        }
+        receivedAmount = Coin.valueOf(received);
+        spendableAmount = Coin.valueOf(spendable);
+        transfersFulfilled = tf;
+    }
+
     public SendRequest tryFinishInvoice() {
         if (finished) {
             logger.info("Invoice " + invoiceId.toString() + " is already finished.");
             return null;
         }
 
+        updateValues(); // update receivedAmount and spendableAmount
+
         SendRequest sr = null;
-        synchronized (this) {
-            boolean alreadyComplete = true;
-            Coin transferAmount = Coin.ZERO;
-            Coin ownAmount = Coin.ZERO;
+        if (receivedAmount.isLessThan(totalAmount)) { // received too few bitcoins
+            logger.info(String.format("Received too few bitcoins to fulfill invoice %s.", invoiceId.toString()));
+
+        } else if (transfersFulfilled) {
+            logger.info(String.format("Received enough bitcoins with already fulfilled transfers for invoice %s.", invoiceId.toString()));
+            finished = true;
+
+        } else { // fulfill transfers
             Transaction tx = new Transaction(params);
 
-            // transfers complete incl. payto minus transfer amount -> finished
+            // get inputs and add missing transfer outputs
             for (PayedAddress pa : payedAddresses.values()) {
-                pa.updateReceivedValues();
-                if (payto.equals(pa.address)) {
-                    ownAmount = pa.receivedValue;
-                    if (totalAmount.subtract(this.transferAmount.add(ownAmount)).isPositive()) {
-                        alreadyComplete = false;
-                        break;
-                    } else {
-                        for (TransactionInput txIn : pa.getInputs()) {
-                            tx.addInput(txIn);
-                        }
-                    }
-                } else { // not the own payto address
-                    if (!pa.isComplete()) {
-                        alreadyComplete = false;
-                        transferAmount = transferAmount.add(pa.receivedValue);
+                if (payto.equals(pa.address)) { // this is payto
+                    for (TransactionInput txIn : pa.getInputs())
+                        tx.addInput(txIn);
+
+                } else { // this is a transfer...
+                    Coin missingValue = pa.targetValue.subtract(pa.receivedValue);
+                    if (missingValue.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT)) { // ...with too few bitcoins
                         tx.addOutput(pa.targetValue.subtract(pa.receivedValue), pa.address);
                     }
                 }
             }
-
-            // transfers incomplete but payto >= totalAmount -> create finishing transaction
-            if ((!alreadyComplete) && !(totalAmount.subtract(ownAmount.add(transferAmount)).isPositive())) {
-                sr = SendRequest.forTx(tx);
-                alreadyComplete = true;
-            }
-
-            // eventually mark this invoice as finished
-            if (alreadyComplete) {
-                logger.info("Invoice " + invoiceId.toString() + " is now finished.");
-                finished = true;
-            }
-
+            tx.setMemo(invoiceId.toString());
+            sr = SendRequest.forTx(tx);
+            logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
+            finished = true; // TODO better set this to true after the transaction has completed
         }
+
         return sr;
     }
 
@@ -223,12 +245,6 @@ class BitcoinInvoice {
                         + " to " + tout.getAddressFromP2PKHScript(params)
                         + " with " + tout.getValue().toFriendlyString());
             }
-        }
-    }
-
-    public void updatePaymentConfidences() {
-        for (PayedAddress pa : payedAddresses.values()) {
-            pa.updateReceivedValues();
         }
     }
 }

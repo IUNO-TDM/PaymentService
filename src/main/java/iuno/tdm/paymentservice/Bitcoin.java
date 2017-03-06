@@ -196,7 +196,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
             bcInvoice.sortOutputsToAddresses(tx);
-            bcInvoice.updatePaymentConfidences();
 
             SendRequest sr = bcInvoice.tryFinishInvoice();
             if (null != sr) {
