@@ -45,6 +45,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener {
@@ -59,6 +60,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
     private static final String PREFIX = "PaymentService";
+
+
+    private CopyOnWriteArrayList<BitcoinInvoiceCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
     private static Bitcoin instance;
 
@@ -218,5 +222,21 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
+    }
+
+
+    public void registerCallbackInterfaceClient(BitcoinInvoiceCallbackInterface callbackClient){
+        callbackClients.add(callbackClient);
+    }
+
+    public void unregisterCallbackInterfaceClient(BitcoinInvoiceCallbackInterface callbackClient){
+        callbackClients.remove(callbackClient);
+    }
+
+    public void sendInvoiceStateChangeToCallbackClients(UUID id, String state){
+        for (BitcoinInvoiceCallbackInterface client:callbackClients) {
+            client.invoiceStateChanged(id,state);
+        }
+
     }
 }
