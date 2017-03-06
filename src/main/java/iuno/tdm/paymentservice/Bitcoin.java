@@ -18,6 +18,7 @@
 
 package iuno.tdm.paymentservice;
 
+import ch.qos.logback.classic.Level;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import io.swagger.model.AddressValuePair;
@@ -69,6 +70,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     private Bitcoin() {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         BriefLogFormatter.initWithSilentBitcoinJ();
+        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
+        rootLogger.setLevel(Level.toLevel("info"));
     }
 
     public static synchronized Bitcoin getInstance() {
