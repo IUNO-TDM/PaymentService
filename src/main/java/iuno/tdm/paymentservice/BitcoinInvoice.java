@@ -19,6 +19,7 @@ package iuno.tdm.paymentservice;
 
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
+import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
@@ -166,6 +167,35 @@ class BitcoinInvoice {
         if (difference.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT))
             transfers.add(new AddressValuePair().address(payto.toBase58()).coin(difference.longValue()));
         return transfers;
+    }
+
+    State getState() {
+        State result = new State();
+
+        // lookup input tx
+        Vector<TransactionOutput> tos = payedAddresses.get(payto).transactionOutputs;
+
+        TransactionOutput to = tos.lastElement(); // TODO WTF?
+
+        TransactionConfidence tc = to.getParentTransaction().getConfidence();
+        switch (tc.getConfidenceType()) {
+            case BUILDING:
+                result.setState(State.StateEnum.BUILDING);
+                result.setDepthInBlocks(tc.getDepthInBlocks());
+            case PENDING:
+                result.setState(State.StateEnum.PENDING);
+                result.setDepthInBlocks(0);
+            case DEAD:
+                result.setState(State.StateEnum.DEAD);
+                result.setDepthInBlocks(Integer.MIN_VALUE);
+            case UNKNOWN:
+            default:
+                result.setState(State.StateEnum.UNKNOWN);
+                result.setDepthInBlocks(Integer.MIN_VALUE);
+        }
+
+
+        return result;
     }
 
     private synchronized void updateValues() {

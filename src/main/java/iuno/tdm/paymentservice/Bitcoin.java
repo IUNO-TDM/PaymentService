@@ -22,6 +22,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
+import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.net.discovery.DnsDiscovery;
@@ -113,6 +114,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
         peerGroup = new PeerGroup(params, blockChain);
         peerGroup.addWallet(wallet);
 
+        peerGroup.addPeerDiscovery(new DnsDiscovery(params));
         Futures.addCallback(peerGroup.startAsync(), new FutureCallback() {
                     @Override
                     public void onSuccess(@Nullable Object o) {
@@ -127,7 +129,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                     }
                 }
         );
-        peerGroup.addPeerDiscovery(new DnsDiscovery(params));
     }
 
     public void stop() {
@@ -167,6 +168,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public List<AddressValuePair> getInvoiceTransfers(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).getTransfers();
+    }
+
+    public State getInvoiceState(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).getState();
     }
 
     public void deleteInvoiceById(UUID id) {
