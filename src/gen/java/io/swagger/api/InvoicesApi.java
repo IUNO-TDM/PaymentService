@@ -12,6 +12,7 @@ import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.InvoiceId;
+import io.swagger.model.State;
 
 import java.util.List;
 import io.swagger.api.NotFoundException;
@@ -25,19 +26,20 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.ws.rs.*;
+import javax.validation.constraints.*;
 
 @Path("/invoices")
 @Consumes({ "application/json" })
-@Produces({ "application/json" })
+@Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
     @POST
     @Path("/{invoiceId}/coupons")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Adds one coupon to the invoice.", notes = "", response = AddressValuePair.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 201, message = "returns the balance of the new coupon", response = AddressValuePair.class),
@@ -56,7 +58,7 @@ public class InvoicesApi  {
     @POST
     
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Add one new invoice.", notes = "", response = Invoice.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 201, message = "id of new invoice", response = Invoice.class),
@@ -72,7 +74,7 @@ public class InvoicesApi  {
     @DELETE
     @Path("/{invoiceId}")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Deletes the invoice to the provided ID.", notes = "", response = void.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "invoice deleted", response = void.class),
@@ -86,7 +88,7 @@ public class InvoicesApi  {
     @GET
     @Path("/{invoiceId}/bip21")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Returns a Bip21 URI for the invoice.", notes = "", response = String.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the Bip21 URI for the invoice", response = String.class),
@@ -100,7 +102,7 @@ public class InvoicesApi  {
     @GET
     @Path("/{invoiceId}")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Returns information about the invoice to the provided id.", notes = "", response = Invoice.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the information about the invoice", response = Invoice.class),
@@ -114,7 +116,7 @@ public class InvoicesApi  {
     @GET
     @Path("/{invoiceId}/coupons/{couponAddress}")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Returns the balance for the requested coupon.", notes = "", response = AddressValuePair.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the balance of the coupon", response = AddressValuePair.class),
@@ -129,7 +131,7 @@ public class InvoicesApi  {
     @GET
     @Path("/{invoiceId}/coupons")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Returns a list of coupon adresses along with their balance.", notes = "", response = AddressValuePair.class, responseContainer = "List", tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the balance for each coupon", response = AddressValuePair.class, responseContainer = "List"),
@@ -141,9 +143,23 @@ public class InvoicesApi  {
         return delegate.getInvoiceCoupons(invoiceId,securityContext);
     }
     @GET
+    @Path("/{invoiceId}/state")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
+    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the invoices state.", notes = "", response = State.class, tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the address value pairs for the invoice as array", response = State.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = State.class) })
+    public Response getInvoiceState(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") String invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getInvoiceState(invoiceId,securityContext);
+    }
+    @GET
     @Path("/{invoiceId}/transfers")
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.", notes = "", response = AddressValuePair.class, responseContainer = "List", tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the address value pairs for the invoice as array", response = AddressValuePair.class, responseContainer = "List"),
@@ -157,7 +173,7 @@ public class InvoicesApi  {
     @GET
     
     @Consumes({ "application/json" })
-    @Produces({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
     @io.swagger.annotations.ApiOperation(value = "The invoices endpoint returns a list of all known invoices ids.", notes = "", response = InvoiceId.class, responseContainer = "List", tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "an array of invoice ids", response = InvoiceId.class, responseContainer = "List") })
