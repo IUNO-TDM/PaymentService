@@ -29,19 +29,18 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 class BitcoinInvoice {
-    final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
+    private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private UUID invoiceId;
     private Coin totalAmount = Coin.ZERO;
     private Coin receivedAmount = Coin.ZERO;
     private Coin transferAmount = Coin.ZERO;
-    private Coin spendableAmount = Coin.ZERO;
     private boolean transfersFulfilled = false;
 
     private Date expiration;
     private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     Invoice invoice;
     private Logger logger;
-    boolean finished = false;
+    private boolean finished = false;
 
     class PayedAddress {
         Address address;
@@ -73,8 +72,7 @@ class BitcoinInvoice {
                     case IN_CONFLICT:
                     case UNKNOWN:
                     default:
-                        logger.info("Transaction " + txOut.getParentTransactionHash().toString() + " has confidence type "
-                        + confidence.toString() + ".");
+                        logger.info(String.format("Transaction %s has confidence type %s.", txOut.getParentTransactionHash().toString(), confidence.toString()));
                 }
             }
             receivedValue = Coin.valueOf(received);
@@ -101,14 +99,14 @@ class BitcoinInvoice {
             return (targetValue.subtract(receivedValue).isPositive());
         }
     }
-    HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
+    private HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
 
     /**
      * This constructor checks a new invoice for sanity.
      * @param id unique id of invoice object
      * @param inv invoice as defined in restful api
      * @param addr address for incoming payment (likely the payments service own wallet)
-     * @throws IllegalArgumentException
+     * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
     BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
@@ -170,15 +168,13 @@ class BitcoinInvoice {
         return transfers;
     }
 
-    synchronized void updateValues() {
+    private synchronized void updateValues() {
         long received = 0;
-        long spendable = 0;
         boolean tf = true;
 
         for (PayedAddress pa : payedAddresses.values()) {
             pa.updateReceivedValues();
             if (payto.equals(pa.address)) {
-                spendable += pa.receivedValue.getValue();
                 received += pa.receivedValue.getValue();
             } else {
                 received += Math.min(pa.receivedValue.getValue(), pa.targetValue.getValue());
@@ -186,11 +182,10 @@ class BitcoinInvoice {
             }
         }
         receivedAmount = Coin.valueOf(received);
-        spendableAmount = Coin.valueOf(spendable);
         transfersFulfilled = tf;
     }
 
-    public SendRequest tryFinishInvoice() {
+    SendRequest tryFinishInvoice() {
         if (finished) {
             logger.info("Invoice " + invoiceId.toString() + " is already finished.");
             return null;
