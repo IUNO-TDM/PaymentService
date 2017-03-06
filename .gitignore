@@ -84,3 +84,6 @@ buildNumber.properties
 # End of https://www.gitignore.io/api/maven,intellij
 payment-service.iml
 misc.xml
+.idea/compiler.xml
+.idea/encodings.xml
+.idea/modules.xml
