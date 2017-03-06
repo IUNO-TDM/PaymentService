@@ -15,12 +15,13 @@ package io.swagger.model;
 
 import java.util.Objects;
 import io.swagger.annotations.ApiModel;
+import javax.validation.constraints.*;
 
 /**
  * Bip38 encoded Bitcoin private key
  */
 @ApiModel(description = "Bip38 encoded Bitcoin private key")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-02T14:39:00.989Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
 public class Coupon   {
 
   @Override

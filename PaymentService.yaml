@@ -15,7 +15,7 @@ consumes:
   - application/json
 produces:
   - application/json
-
+  - text/plain
 paths:
   /invoices:
     post:
@@ -112,6 +112,26 @@ paths:
           schema:
             type: string
 
+  /invoices/{invoiceId}/state:
+    get:
+      summary: Returns a confidence object that describes the invoices state.
+      operationId: getInvoiceState
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          required: true
+          description: the invoice id to get the state for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the address value pairs for the invoice as array
+          schema:
+            $ref: '#/definitions/State'
+
   /invoices/{invoiceId}/transfers:
     get:
       summary: Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
@@ -133,8 +153,6 @@ paths:
             type: array
             items:
               $ref: '#/definitions/AddressValuePair'
-
-# TODO: invoice state information interface needed
 
   /invoices/{invoiceId}/coupons:
     post:
@@ -255,6 +273,24 @@ definitions:
         description: array of all transfer outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
+
+  State:
+    description: invoice confidence state
+    type: object
+    properties:
+      State:
+        type: string
+        description: confidence state
+        default: unknown
+        enum:
+        - building
+        - pending
+        - dead
+        - unknown
+      DepthInBlocks:
+        type: integer
+        format: int32
+        description: depth of a building transaction in blocks
 
   Error:
     type: object
