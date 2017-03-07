@@ -276,6 +276,9 @@ definitions:
           $ref: '#/definitions/AddressValuePair'
       invoiceId:
         $ref: '#/definitions/InvoiceId'
+      referenceId:
+        type: string
+        description: id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service
 
   State:
     description: invoice confidence state
