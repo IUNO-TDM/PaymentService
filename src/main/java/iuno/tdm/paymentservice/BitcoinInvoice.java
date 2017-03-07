@@ -31,7 +31,6 @@ import java.util.*;
 
 class BitcoinInvoice {
     private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
-    private UUID invoiceId;
     private Coin totalAmount = Coin.ZERO;
     private Coin receivedAmount = Coin.ZERO;
     private Coin transferAmount = Coin.ZERO;
@@ -133,7 +132,7 @@ class BitcoinInvoice {
         if (isExpired())
             throw new IllegalArgumentException("expiration date must be in the future");
 
-        invoiceId = id;
+        inv.setInvoiceId(id);
         invoice = inv;
         payto = addr;
 
@@ -216,6 +215,7 @@ class BitcoinInvoice {
     }
 
     SendRequest tryFinishInvoice() {
+        UUID invoiceId = invoice.getInvoiceId();
         if (finished) {
             logger.info("Invoice " + invoiceId.toString() + " is already finished.");
             return null;
@@ -266,7 +266,7 @@ class BitcoinInvoice {
             Address dest = tout.getAddressFromP2PKHScript(params);
             if (payedAddresses.containsKey(dest)) {
                 payedAddresses.get(dest).addTransaction(tout);
-                logger.info("Received payment for invoice " + invoiceId.toString()
+                logger.info("Received payment for invoice " + invoice.getInvoiceId().toString()
                         + " to " + tout.getAddressFromP2PKHScript(params)
                         + " with " + tout.getValue().toFriendlyString());
             }
