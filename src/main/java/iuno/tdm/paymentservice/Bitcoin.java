@@ -233,6 +233,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                     e.printStackTrace();
                 }
             }
+            // TODO find the right place to notify clients about changed invoice state
+            sendInvoiceStateChangeToCallbackClients(bcInvoice.invoice, bcInvoice.getState());
         }
 
         // cleanup expired transactions

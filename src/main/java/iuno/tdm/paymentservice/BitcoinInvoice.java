@@ -154,7 +154,7 @@ class BitcoinInvoice {
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
         for (TransactionOutput tout : payingTx.getOutputs()) {
-            if (payingTx.equals(tout.getAddressFromP2PKHScript(params))
+            if (payDirect.equals(tout.getAddressFromP2PKHScript(params))
                     && tout.isAvailableForSpending()) {
                 int index = tout.getIndex();
                 TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, payingTx);
