@@ -63,7 +63,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     private static final String PREFIX = "PaymentService";
 
 
-    private CopyOnWriteArrayList<BitcoinInvoiceCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
+    private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
     private static Bitcoin instance;
 
@@ -228,17 +228,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
     }
 
 
-    public void registerCallbackInterfaceClient(BitcoinInvoiceCallbackInterface callbackClient){
+    public void registerCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
         callbackClients.add(callbackClient);
     }
 
-    public void unregisterCallbackInterfaceClient(BitcoinInvoiceCallbackInterface callbackClient){
+    public void unregisterCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
         callbackClients.remove(callbackClient);
     }
 
-    public void sendInvoiceStateChangeToCallbackClients(UUID id, String state){
-        for (BitcoinInvoiceCallbackInterface client:callbackClients) {
-            client.invoiceStateChanged(id,state);
+    public void sendInvoiceStateChangeToCallbackClients(Invoice invoice, State state){
+        for (BitcoinCallbackInterface client:callbackClients) {
+            client.invoiceStateChanged(invoice,state);
         }
 
     }
