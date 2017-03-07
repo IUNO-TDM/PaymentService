@@ -19,16 +19,16 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.model.AddressValuePair;
-import io.swagger.model.InvoiceId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 import javax.validation.constraints.*;
 
 /**
  * Invoice
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T14:06:02.497Z")
 public class Invoice   {
   @JsonProperty("totalAmount")
   private Long totalAmount = null;
@@ -40,7 +40,7 @@ public class Invoice   {
   private List<AddressValuePair> transfers = new ArrayList<AddressValuePair>();
 
   @JsonProperty("invoiceId")
-  private InvoiceId invoiceId = null;
+  private UUID invoiceId = null;
 
   @JsonProperty("referenceId")
   private String referenceId = null;
@@ -107,22 +107,22 @@ public class Invoice   {
     this.transfers = transfers;
   }
 
-  public Invoice invoiceId(InvoiceId invoiceId) {
+  public Invoice invoiceId(UUID invoiceId) {
     this.invoiceId = invoiceId;
     return this;
   }
 
    /**
-   * Get invoiceId
+   * unique id of the invoice assigned by payment service
    * @return invoiceId
   **/
   @JsonProperty("invoiceId")
-  @ApiModelProperty(value = "")
-  public InvoiceId getInvoiceId() {
+  @ApiModelProperty(value = "unique id of the invoice assigned by payment service")
+  public UUID getInvoiceId() {
     return invoiceId;
   }
 
-  public void setInvoiceId(InvoiceId invoiceId) {
+  public void setInvoiceId(UUID invoiceId) {
     this.invoiceId = invoiceId;
   }
 

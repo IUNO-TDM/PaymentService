@@ -4,34 +4,32 @@ import io.swagger.api.*;
 import io.swagger.model.*;
 
 import io.swagger.model.AddressValuePair;
-import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
-import io.swagger.model.InvoiceId;
 import io.swagger.model.State;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.UUID;
+
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
 import java.io.InputStream;
-import java.util.UUID;
 
-import iuno.tdm.paymentservice.Bitcoin;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
-import javax.validation.constraints.Null;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
+import iuno.tdm.paymentservice.Bitcoin;
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private final Bitcoin bc = Bitcoin.getInstance();
 
     @Override
-    public Response addCouponToInvoice(String invoiceId, Coupon coupon, SecurityContext securityContext) throws NotFoundException {
+    public Response addCouponToInvoice(UUID invoiceId, String coupon, SecurityContext securityContext) throws NotFoundException {
         // do some magic!
         return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
     }
@@ -61,10 +59,9 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         }
     }
     @Override
-    public Response deleteInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        UUID id = UUID.fromString(invoiceId);
+    public Response deleteInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            bc.deleteInvoiceById(id);
+            bc.deleteInvoiceById(invoiceId);
             return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
         // TODO: there will be no NullPointerException - remove on a hashmap will always succeed
@@ -75,10 +72,9 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         }
     }
     @Override
-    public Response getInvoiceBip21(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        UUID id = UUID.fromString(invoiceId);
+    public Response getInvoiceBip21(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            String bip21 = bc.getInvoiceBip21(id);
+            String bip21 = bc.getInvoiceBip21(invoiceId);
             return Response.ok().entity(bip21).type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -88,10 +84,9 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         }
     }
     @Override
-    public Response getInvoiceById(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        UUID id = UUID.fromString(invoiceId);
+    public Response getInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            Invoice invoice = bc.getInvoiceById(id);
+            Invoice invoice = bc.getInvoiceById(invoiceId);
             return Response.ok().entity(invoice).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -101,20 +96,19 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         }
     }
     @Override
-    public Response getInvoiceCouponBalance(String invoiceId, String couponAddress, SecurityContext securityContext) throws NotFoundException {
+    public Response getInvoiceCouponBalance(UUID invoiceId, String couponAddress, SecurityContext securityContext) throws NotFoundException {
         // do some magic!
         return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
     }
     @Override
-    public Response getInvoiceCoupons(String invoiceId, SecurityContext securityContext) throws NotFoundException {
+    public Response getInvoiceCoupons(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         // do some magic!
         return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
     }
     @Override
-    public Response getInvoiceState(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        UUID id = UUID.fromString(invoiceId);
+    public Response getInvoiceState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            State state = bc.getInvoiceState(id);
+            State state = bc.getInvoiceState(invoiceId);
             return Response.ok().entity(state).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -124,10 +118,9 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         }
     }
     @Override
-    public Response getInvoiceTransfers(String invoiceId, SecurityContext securityContext) throws NotFoundException {
-        UUID id = UUID.fromString(invoiceId);
+    public Response getInvoiceTransfers(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            List<AddressValuePair> transfers = bc.getInvoiceTransfers(id);
+            List<AddressValuePair> transfers = bc.getInvoiceTransfers(invoiceId);
             return Response.ok().entity(transfers).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
