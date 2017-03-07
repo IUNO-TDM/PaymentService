@@ -29,74 +29,32 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+/**
+ * Invoices may be paid by either completing a BIP21 URI in one single transaction
+ * or by completing all transfers in one single transaction.
+ */
+
 class BitcoinInvoice {
     private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
-    private Coin totalAmount = Coin.ZERO;
-    private Coin receivedAmount = Coin.ZERO;
-    private Coin transferAmount = Coin.ZERO;
-    private boolean transfersFulfilled = false;
+    private long totalAmount = 0;
+    private long transferAmount = 0;
 
     private Date expiration;
-    private Address payto; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
+    private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
+    private Address payTransfers;
     Invoice invoice;
     private Logger logger;
-    private boolean finished = false;
+
+    private Transaction payingTx;
+    private Transaction transferTx;
 
     class PayedAddress {
-        Address address;
+        final Address address;
         final Coin targetValue;
-        Coin receivedValue;
-        Vector<TransactionOutput> transactionOutputs = new Vector<>();
 
         PayedAddress(Address a, Coin target) {
             address = a;
             targetValue = target;
-            receivedValue = Coin.ZERO;
-        }
-
-        void addTransaction(TransactionOutput txOut) {
-            transactionOutputs.add(txOut);
-        }
-
-        void updateReceivedValues() { // TODO: maybe it would be a good idea to call back this by a transaction confidence listener
-            long received = 0;
-            for (TransactionOutput txOut : transactionOutputs) {
-                if ( ! txOut.isAvailableForSpending()) continue; // only count unspent outputs
-                TransactionConfidence confidence = txOut.getParentTransaction().getConfidence();
-                switch (confidence.getConfidenceType()) {
-                    case BUILDING:
-                    case PENDING:
-//                        if (txOut.isAvailableForSpending()) // would be available, not received
-                            received += txOut.getValue().getValue();
-                    case DEAD:
-                    case IN_CONFLICT:
-                    case UNKNOWN:
-                    default:
-                        logger.info(String.format("Transaction %s has confidence type %s.", txOut.getParentTransactionHash().toString(), confidence.toString()));
-                }
-            }
-            receivedValue = Coin.valueOf(received);
-        }
-
-        Set<TransactionInput> getInputs() {
-            Set<TransactionInput> inputs = new HashSet<>();
-            for (TransactionOutput tout : transactionOutputs) {
-                if (tout.isAvailableForSpending()) { // TODO should be checked with isMine()...
-                    int index = tout.getIndex();
-                    Transaction tx = tout.getParentTransaction();
-                    TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, tx);
-                    byte[] script = tout.getScriptBytes();
-                    TransactionInput txin; // TODO check if script needs to contain something
-                    txin = new TransactionInput(params, tx, script, txOutpoint);
-                    txin.clearScriptBytes();
-                    inputs.add(txin);
-                }
-            }
-            return inputs;
-        }
-
-        boolean isInComplete() {
-            return (targetValue.subtract(receivedValue).isPositive());
         }
     }
     private HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
@@ -108,24 +66,24 @@ class BitcoinInvoice {
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         // check sanity of invoice
-        totalAmount = Coin.valueOf(inv.getTotalAmount());
-        if (totalAmount.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
+        totalAmount = inv.getTotalAmount();
+        if (totalAmount < Transaction.MIN_NONDUST_OUTPUT.getValue())
             throw new IllegalArgumentException("invoice amount is less than bitcoin minimum dust output");
 
         // check values (transfer shall be lower than totalamount)
         for (AddressValuePair avp : inv.getTransfers()) {
             Address a = Address.fromBase58(params, avp.getAddress());
-            Coin value = Coin.valueOf(avp.getCoin());
-            if (value.isLessThan(Transaction.MIN_NONDUST_OUTPUT))
+            long value = avp.getCoin();
+            if (value < Transaction.MIN_NONDUST_OUTPUT.getValue())
                 throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
-            transferAmount = transferAmount.add(value);
-            payedAddresses.put(a, new PayedAddress(a, value));
+            transferAmount += value;
+            payedAddresses.put(a, new PayedAddress(a, Coin.valueOf(value)));
         }
-        if (totalAmount.isLessThan(transferAmount))
-            throw new IllegalArgumentException("total invoice amount is less than sum of transfer amounts");
+        if (totalAmount < (transferAmount + Transaction.MIN_NONDUST_OUTPUT.getValue()))
+            throw new IllegalArgumentException("total invoice amount minus sum of transfer amounts is dust");
 
         // expiration date shall be in the future
         expiration = inv.getExpiration();
@@ -134,9 +92,10 @@ class BitcoinInvoice {
 
         inv.setInvoiceId(id);
         invoice = inv;
-        payto = addr;
+        payDirect = addr;
+        payTransfers = addr2;
 
-        payedAddresses.put(payto, new PayedAddress(payto, transferAmount));
+        payedAddresses.put(payTransfers, new PayedAddress(payTransfers, Coin.valueOf(transferAmount)));
     }
 
     /**
@@ -152,7 +111,7 @@ class BitcoinInvoice {
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(payto, totalAmount, "PaymentService", "all your coins belong to us");
+        return BitcoinURI.convertToBitcoinURI(payDirect, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
     }
 
     /**
@@ -162,98 +121,95 @@ class BitcoinInvoice {
     List<AddressValuePair> getTransfers() {
         List<AddressValuePair> transfers = new Vector<>();
         transfers.addAll(invoice.getTransfers());
-        Coin difference = totalAmount.subtract(transferAmount);
-        if (difference.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT))
-            transfers.add(new AddressValuePair().address(payto.toBase58()).coin(difference.longValue()));
+        long difference = totalAmount - transferAmount;
+        transfers.add(new AddressValuePair().address(payTransfers.toBase58()).coin(difference));
         return transfers;
     }
 
     State getState() {
         State result = new State();
+        result.setState(State.StateEnum.UNKNOWN);
+        result.setDepthInBlocks(Integer.MIN_VALUE);
 
         // lookup input tx
-        Vector<TransactionOutput> tos = payedAddresses.get(payto).transactionOutputs;
-
-        TransactionOutput to = tos.lastElement(); // TODO WTF?
-
-        TransactionConfidence tc = to.getParentTransaction().getConfidence();
-        switch (tc.getConfidenceType()) {
-            case BUILDING:
-                result.setState(State.StateEnum.BUILDING);
-                result.setDepthInBlocks(tc.getDepthInBlocks());
-            case PENDING:
-                result.setState(State.StateEnum.PENDING);
-                result.setDepthInBlocks(0);
-            case DEAD:
-                result.setState(State.StateEnum.DEAD);
-                result.setDepthInBlocks(Integer.MIN_VALUE);
-            case UNKNOWN:
-            default:
-                result.setState(State.StateEnum.UNKNOWN);
-                result.setDepthInBlocks(Integer.MIN_VALUE);
+        if (null != payingTx) {
+            TransactionConfidence tc = payingTx.getConfidence();
+            switch (tc.getConfidenceType()) {
+                case BUILDING:
+                    result.setState(State.StateEnum.BUILDING);
+                    result.setDepthInBlocks(tc.getDepthInBlocks());
+                case PENDING:
+                    result.setState(State.StateEnum.PENDING);
+                    result.setDepthInBlocks(0);
+                case DEAD:
+                    result.setState(State.StateEnum.DEAD);
+                    result.setDepthInBlocks(Integer.MIN_VALUE);
+                case UNKNOWN:
+                default:
+            }
         }
-
-
         return result;
     }
 
-    private synchronized void updateValues() {
-        long received = 0;
-        boolean tf = true;
-
-        for (PayedAddress pa : payedAddresses.values()) {
-            pa.updateReceivedValues();
-            if (payto.equals(pa.address)) {
-                received += pa.receivedValue.getValue();
-            } else {
-                received += Math.min(pa.receivedValue.getValue(), pa.targetValue.getValue());
-                if (pa.isInComplete()) tf = false;
+    Set<TransactionInput> getInputs() {
+        Set<TransactionInput> inputs = new HashSet<>();
+        for (TransactionOutput tout : payingTx.getOutputs()) {
+            if (payingTx.equals(tout.getAddressFromP2PKHScript(params))
+                    && tout.isAvailableForSpending()) {
+                int index = tout.getIndex();
+                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, payingTx);
+                byte[] script = tout.getScriptBytes();
+                TransactionInput txin; // TODO check if script needs to contain something
+                txin = new TransactionInput(params, payingTx, script, txOutpoint);
+                txin.clearScriptBytes();
+                inputs.add(txin);
             }
         }
-        receivedAmount = Coin.valueOf(received);
-        transfersFulfilled = tf;
+        return inputs;
     }
 
     SendRequest tryFinishInvoice() {
         UUID invoiceId = invoice.getInvoiceId();
-        if (finished) {
+        if (null == payingTx) {
+            logger.info("Invoice " + invoiceId.toString() + " has not yet been paid.");
+            return null;
+        }
+
+        if (null != transferTx) {
             logger.info("Invoice " + invoiceId.toString() + " is already finished.");
             return null;
         }
 
-        updateValues(); // update receivedAmount and spendableAmount
+        Transaction tx = new Transaction(params);
 
-        SendRequest sr = null;
-        if (receivedAmount.isLessThan(totalAmount)) { // received too few bitcoins
-            logger.info(String.format("Received too few bitcoins to fulfill invoice %s.", invoiceId.toString()));
+        // add inputs from incoming payment
+        for (TransactionInput txin : getInputs())
+            tx.addInput(txin);
 
-        } else if (transfersFulfilled) {
-            logger.info(String.format("Received enough bitcoins with already fulfilled transfers for invoice %s.", invoiceId.toString()));
-            finished = true;
-
-        } else { // fulfill transfers
-            Transaction tx = new Transaction(params);
-
-            // get inputs and add missing transfer outputs
-            for (PayedAddress pa : payedAddresses.values()) {
-                if (payto.equals(pa.address)) { // this is payto
-                    for (TransactionInput txIn : pa.getInputs())
-                        tx.addInput(txIn);
-
-                } else { // this is a transfer...
-                    Coin missingValue = pa.targetValue.subtract(pa.receivedValue);
-                    if (missingValue.isGreaterThan(Transaction.MIN_NONDUST_OUTPUT)) { // ...with too few bitcoins
-                        tx.addOutput(pa.targetValue.subtract(pa.receivedValue), pa.address);
-                    }
-                }
-            }
-            tx.setMemo(invoiceId.toString());
-            sr = SendRequest.forTx(tx);
-            logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
-            finished = true; // TODO better set this to true after the transaction has completed
+        // add transfer outputs
+        for (PayedAddress pa : payedAddresses.values()) {
+            if (! payTransfers.equals(pa.address))
+                tx.addOutput(pa.targetValue, pa.address);
         }
+        tx.setMemo(invoiceId.toString());
+        SendRequest sr = SendRequest.forTx(tx);
+        transferTx = tx;
+        logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
+    }
+
+    private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
+        boolean result = true;
+
+        for (PayedAddress pa : payedAddresses.values()) {
+            if ( ! (foo.keySet().contains(pa.address))
+                    || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
+                result = false;
+            }
+        }
+
+        return result;
     }
 
     /**
@@ -261,14 +217,23 @@ class BitcoinInvoice {
      * @deprecated this is an inefficient way that only works for verifying just a few payments per second
      * @param tx new transaction with outputs to be checked
      */
-    public void sortOutputsToAddresses(Transaction tx) {
-        for (TransactionOutput tout : tx.getOutputs()) {
-            Address dest = tout.getAddressFromP2PKHScript(params);
-            if (payedAddresses.containsKey(dest)) {
-                payedAddresses.get(dest).addTransaction(tout);
-                logger.info("Received payment for invoice " + invoice.getInvoiceId().toString()
-                        + " to " + tout.getAddressFromP2PKHScript(params)
-                        + " with " + tout.getValue().toFriendlyString());
+    public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> foo) {
+
+        if (foo.keySet().contains(payDirect)) {
+            long value = foo.get(payDirect).getValue();
+            if (totalAmount <= value) { // transaction fulfills direct payment
+                logger.info("Received direct payment for invoice " + invoice.getInvoiceId().toString()
+                        + " to " + payDirect
+                        + " with " + foo.get(payDirect).toFriendlyString());
+                payingTx = tx;
+            }
+
+        } else if (foo.keySet().contains(payTransfers)) {
+            if (doesTxFulfillTransferPayment(foo)) {
+                logger.info("Received transfer payment for invoice " + invoice.getInvoiceId().toString()
+                        + " to " + payTransfers);
+                payingTx = tx;
+                transferTx = tx;
             }
         }
     }

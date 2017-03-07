@@ -156,7 +156,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress());
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress());
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -204,10 +204,24 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     @Override
     public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
-        Coin value = tx.getValueSentToMe(wallet);
-        logger.info("Received tx for " + value.toFriendlyString() + ": " + tx);
+        logger.info("Received tx with " + tx.getValueSentToMe(wallet).toFriendlyString() + ": " + tx);
+
+        HashMap<Address, Coin> foo = new HashMap<>();
+        for (TransactionOutput txout : tx.getOutputs()) {
+            Address addr = txout.getAddressFromP2PKHScript(params);
+            Coin value = txout.getValue();
+            if (null != addr) {
+                if (! foo.containsKey(addr)) {
+                    foo.put(addr, value);
+
+                } else {
+                    foo.put(addr, foo.get(addr).add(value));
+                }
+            }
+        }
+
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
-            bcInvoice.sortOutputsToAddresses(tx);
+            bcInvoice.sortOutputsToAddresses(tx, foo);
 
             SendRequest sr = bcInvoice.tryFinishInvoice();
             if (null != sr) {
