@@ -19,6 +19,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import io.swagger.model.AddressValuePair;
+import io.swagger.model.InvoiceId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -27,16 +28,22 @@ import javax.validation.constraints.*;
 /**
  * Invoice
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class Invoice   {
-  @JsonProperty("TotalAmount")
+  @JsonProperty("totalAmount")
   private Long totalAmount = null;
 
-  @JsonProperty("Expiration")
+  @JsonProperty("expiration")
   private Date expiration = null;
 
-  @JsonProperty("Transfers")
+  @JsonProperty("transfers")
   private List<AddressValuePair> transfers = new ArrayList<AddressValuePair>();
+
+  @JsonProperty("invoiceId")
+  private InvoiceId invoiceId = null;
+
+  @JsonProperty("referenceId")
+  private String referenceId = null;
 
   public Invoice totalAmount(Long totalAmount) {
     this.totalAmount = totalAmount;
@@ -47,7 +54,7 @@ public class Invoice   {
    * total amount of Satoshis that are requested to be paid
    * @return totalAmount
   **/
-  @JsonProperty("TotalAmount")
+  @JsonProperty("totalAmount")
   @ApiModelProperty(value = "total amount of Satoshis that are requested to be paid")
   public Long getTotalAmount() {
     return totalAmount;
@@ -66,7 +73,7 @@ public class Invoice   {
    * date after which this invoice is no longer valid
    * @return expiration
   **/
-  @JsonProperty("Expiration")
+  @JsonProperty("expiration")
   @ApiModelProperty(value = "date after which this invoice is no longer valid")
   public Date getExpiration() {
     return expiration;
@@ -90,7 +97,7 @@ public class Invoice   {
    * array of all transfer outputs with their values
    * @return transfers
   **/
-  @JsonProperty("Transfers")
+  @JsonProperty("transfers")
   @ApiModelProperty(value = "array of all transfer outputs with their values")
   public List<AddressValuePair> getTransfers() {
     return transfers;
@@ -98,6 +105,44 @@ public class Invoice   {
 
   public void setTransfers(List<AddressValuePair> transfers) {
     this.transfers = transfers;
+  }
+
+  public Invoice invoiceId(InvoiceId invoiceId) {
+    this.invoiceId = invoiceId;
+    return this;
+  }
+
+   /**
+   * Get invoiceId
+   * @return invoiceId
+  **/
+  @JsonProperty("invoiceId")
+  @ApiModelProperty(value = "")
+  public InvoiceId getInvoiceId() {
+    return invoiceId;
+  }
+
+  public void setInvoiceId(InvoiceId invoiceId) {
+    this.invoiceId = invoiceId;
+  }
+
+  public Invoice referenceId(String referenceId) {
+    this.referenceId = referenceId;
+    return this;
+  }
+
+   /**
+   * id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service
+   * @return referenceId
+  **/
+  @JsonProperty("referenceId")
+  @ApiModelProperty(value = "id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service")
+  public String getReferenceId() {
+    return referenceId;
+  }
+
+  public void setReferenceId(String referenceId) {
+    this.referenceId = referenceId;
   }
 
 
@@ -112,12 +157,14 @@ public class Invoice   {
     Invoice invoice = (Invoice) o;
     return Objects.equals(this.totalAmount, invoice.totalAmount) &&
         Objects.equals(this.expiration, invoice.expiration) &&
-        Objects.equals(this.transfers, invoice.transfers);
+        Objects.equals(this.transfers, invoice.transfers) &&
+        Objects.equals(this.invoiceId, invoice.invoiceId) &&
+        Objects.equals(this.referenceId, invoice.referenceId);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(totalAmount, expiration, transfers);
+    return Objects.hash(totalAmount, expiration, transfers, invoiceId, referenceId);
   }
 
 
@@ -129,6 +176,8 @@ public class Invoice   {
     sb.append("    totalAmount: ").append(toIndentedString(totalAmount)).append("\n");
     sb.append("    expiration: ").append(toIndentedString(expiration)).append("\n");
     sb.append("    transfers: ").append(toIndentedString(transfers)).append("\n");
+    sb.append("    invoiceId: ").append(toIndentedString(invoiceId)).append("\n");
+    sb.append("    referenceId: ").append(toIndentedString(referenceId)).append("\n");
     sb.append("}");
     return sb.toString();
   }

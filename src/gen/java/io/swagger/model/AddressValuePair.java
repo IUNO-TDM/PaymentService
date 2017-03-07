@@ -23,12 +23,12 @@ import javax.validation.constraints.*;
 /**
  * AddressValuePair
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class AddressValuePair   {
-  @JsonProperty("Address")
+  @JsonProperty("address")
   private String address = null;
 
-  @JsonProperty("Coin")
+  @JsonProperty("coin")
   private Long coin = null;
 
   public AddressValuePair address(String address) {
@@ -40,7 +40,7 @@ public class AddressValuePair   {
    * Bitcoin Base58 encoded public key hash address
    * @return address
   **/
-  @JsonProperty("Address")
+  @JsonProperty("address")
   @ApiModelProperty(value = "Bitcoin Base58 encoded public key hash address")
   public String getAddress() {
     return address;
@@ -59,7 +59,7 @@ public class AddressValuePair   {
    * value in Satoshis
    * @return coin
   **/
-  @JsonProperty("Coin")
+  @JsonProperty("coin")
   @ApiModelProperty(value = "value in Satoshis")
   public Long getCoin() {
     return coin;

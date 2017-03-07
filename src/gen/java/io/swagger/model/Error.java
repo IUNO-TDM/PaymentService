@@ -23,9 +23,9 @@ import javax.validation.constraints.*;
 /**
  * Error
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class Error   {
-  @JsonProperty("Message")
+  @JsonProperty("message")
   private String message = null;
 
   public Error message(String message) {
@@ -37,7 +37,7 @@ public class Error   {
    * meaningful error message
    * @return message
   **/
-  @JsonProperty("Message")
+  @JsonProperty("message")
   @ApiModelProperty(value = "meaningful error message")
   public String getMessage() {
     return message;
