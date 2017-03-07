@@ -273,6 +273,10 @@ definitions:
         description: array of all transfer outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
+      invoiceId:
+        type: string
+        format: uuid
+        description: unique id of the invoice assigned by payment service
 
   State:
     description: invoice confidence state
