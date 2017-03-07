@@ -240,7 +240,8 @@ paths:
 definitions:
   InvoiceId:
     type: string
-    description: unique invoice id
+    format: uuid
+    description: unique id of the invoice assigned by payment service
 
   Coupon:
     type: string
@@ -249,10 +250,10 @@ definitions:
   AddressValuePair:
     type: object
     properties:
-      Address:
+      address:
         type: string
         description: Bitcoin Base58 encoded public key hash address
-      Coin:
+      coin:
         type: integer
         format: int64
         description: value in Satoshis
@@ -260,29 +261,27 @@ definitions:
   Invoice:
     type: object
     properties:
-      TotalAmount:
+      totalAmount:
         type: integer
         format: int64
         description: total amount of Satoshis that are requested to be paid
-      Expiration:
+      expiration:
         type: string
         format: date-time
         description: date after which this invoice is no longer valid
-      Transfers:
+      transfers:
         type: array
         description: array of all transfer outputs with their values
         items:
           $ref: '#/definitions/AddressValuePair'
       invoiceId:
-        type: string
-        format: uuid
-        description: unique id of the invoice assigned by payment service
+        $ref: '#/definitions/InvoiceId'
 
   State:
     description: invoice confidence state
     type: object
     properties:
-      State:
+      state:
         type: string
         description: confidence state
         default: unknown
@@ -291,7 +290,7 @@ definitions:
         - pending
         - dead
         - unknown
-      DepthInBlocks:
+      depthInBlocks:
         type: integer
         format: int32
         description: depth of a building transaction in blocks
@@ -299,6 +298,6 @@ definitions:
   Error:
     type: object
     properties:
-      Message:
+      message:
         type: string
         description: meaningful error message
