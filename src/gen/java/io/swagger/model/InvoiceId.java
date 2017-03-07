@@ -18,10 +18,10 @@ import io.swagger.annotations.ApiModel;
 import javax.validation.constraints.*;
 
 /**
- * unique invoice id
+ * unique id of the invoice assigned by payment service
  */
-@ApiModel(description = "unique invoice id")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-06T12:55:18.855Z")
+@ApiModel(description = "unique id of the invoice assigned by payment service")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class InvoiceId   {
 
   @Override
