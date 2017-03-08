@@ -94,7 +94,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
     static String buildJsonString(Invoice invoice, State state) {
         String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
                 + "\",\"referenceId\":\"" + invoice.getReferenceId()
-                + "\",\"state\":\"" + state.getState() + "\",\"depth\":\""+ state.getDepthInBlocks();
+                + "\",\"state\":\"" + state.getState() + "\",\"depth\":"+ state.getDepthInBlocks() + "}" ;
         return jsonString;
     }
 }
