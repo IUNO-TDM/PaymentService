@@ -39,8 +39,17 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                     public Object onEvent(String name, Object[] args, boolean ackRequested) {
                         if (args[0].getClass().equals(String.class)) {
                             socket.join((String) args[0]);
-//                             Invoice invoice = bitcoin.getInvoiceById(UUID.fromString((String)args[0]));
-                            //TODO send current invoice state to new client
+                            try{
+                                BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String)args[0]));
+                                String jsonString = buildJsonString(bcInvoice.invoice, bcInvoice.getState());
+                                socket.emit("StateChange", jsonString);
+                            }catch (NullPointerException e){
+                                logger.error("The requested Invoice does not exists. Cannot send any Stateupdate at " +
+                                        "this moment...maybe later", e);
+                            } catch (SocketIOException e){
+                                logger.error("Tried to send a first state",e);
+                            }
+
                             return "OK";
                         }
                         return "Wrong format";
@@ -69,7 +78,8 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                 try {
                     //TODO find more elegant way to generate a JSON object
                     String jsonString = buildJsonString(invoice, state);
-                    of("/invoices").in(invoice.getInvoiceId().toString()).emit("StateChange", jsonString);
+                    String roomId = invoice.getInvoiceId().toString();
+                    of("/invoices").in(roomId).emit("StateChange", jsonString);
                 } catch (SocketIOException e) {
                     logger.error("SocketIOException in invoiceStateChanged ", e);
                 }
@@ -80,10 +90,11 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
         bitcoin.registerCallbackInterfaceClient(client);
     }
 
+
     static String buildJsonString(Invoice invoice, State state) {
-        String jsonString = "{invoiceId:\"" + invoice.getInvoiceId()
-                + "\",referenceId:\"" + invoice.getReferenceId()
-                + "\",state:\"" + state.toString() + "\"";
+        String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
+                + "\",\"referenceId\":\"" + invoice.getReferenceId()
+                + "\",\"state\":\"" + state.getState() + "\",\"depth\":\""+ state.getDepthInBlocks();
         return jsonString;
     }
 }

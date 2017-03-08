@@ -29,6 +29,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
+
 /**
  * Invoices may be paid by either completing a BIP21 URI in one single transaction
  * or by completing all transfers in one single transaction.
@@ -45,6 +46,8 @@ class BitcoinInvoice {
     Invoice invoice;
     private Logger logger;
 
+    private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
+
     private Transaction payingTx;
     private Transaction transferTx;
 
@@ -59,6 +62,19 @@ class BitcoinInvoice {
     }
     private HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
 
+
+    private TransactionConfidence.Listener payingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
+        @Override
+        public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
+            if(bitcoinInvoiceCallbackInterface != null){
+                State state = getStateForTransaction(payingTx,confidence);
+                bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
+            }
+        }
+    };
+
+
+
     /**
      * This constructor checks a new invoice for sanity.
      * @param id unique id of invoice object
@@ -66,8 +82,9 @@ class BitcoinInvoice {
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
+        bitcoinInvoiceCallbackInterface = callbackInterface;
         // check sanity of invoice
         totalAmount = inv.getTotalAmount();
         if (totalAmount < Transaction.MIN_NONDUST_OUTPUT.getValue())
@@ -127,29 +144,43 @@ class BitcoinInvoice {
     }
 
     State getState() {
+
+        return getStateForTransaction(payingTx,null);
+    }
+
+    private State getStateForTransaction(Transaction transaction,TransactionConfidence confidence) {
         State result = new State();
         result.setState(State.StateEnum.UNKNOWN);
         result.setDepthInBlocks(Integer.MIN_VALUE);
-
-        // lookup input tx
-        if (null != payingTx) {
-            TransactionConfidence tc = payingTx.getConfidence();
-            switch (tc.getConfidenceType()) {
+        if (transaction != null) {
+            TransactionConfidence conf = confidence;
+            if (conf == null) {
+                conf = transaction.getConfidence();
+            }
+            switch (conf.getConfidenceType()) {
                 case BUILDING:
                     result.setState(State.StateEnum.BUILDING);
-                    result.setDepthInBlocks(tc.getDepthInBlocks());
+                    result.setDepthInBlocks(conf.getDepthInBlocks());
+                    break;
                 case PENDING:
                     result.setState(State.StateEnum.PENDING);
                     result.setDepthInBlocks(0);
+                    break;
                 case DEAD:
                     result.setState(State.StateEnum.DEAD);
                     result.setDepthInBlocks(Integer.MIN_VALUE);
+                    break;
                 case UNKNOWN:
                 default:
             }
+
         }
+
+
         return result;
     }
+
+
 
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
@@ -226,6 +257,8 @@ class BitcoinInvoice {
                         + " to " + payDirect
                         + " with " + foo.get(payDirect).toFriendlyString());
                 payingTx = tx;
+                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+                payingTransactionConfidenceListener.onConfidenceChanged(payingTx.getConfidence(),null);
             }
 
         } else if (foo.keySet().contains(payTransfers)) {
@@ -234,6 +267,7 @@ class BitcoinInvoice {
                         + " to " + payTransfers);
                 payingTx = tx;
                 transferTx = tx;
+                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             }
         }
     }

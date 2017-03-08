@@ -49,7 +49,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin implements WalletCoinsReceivedEventListener {
+public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoiceCallbackInterface {
     final NetworkParameters params = TestNet3Params.get();
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
@@ -156,7 +156,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress());
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -167,6 +167,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
 
     public Invoice getInvoiceById(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).invoice;
+    }
+    public BitcoinInvoice getBitcoinInvoiceById(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id);
     }
 
     public String getInvoiceBip21(UUID id) throws NullPointerException {
@@ -233,8 +236,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
                     e.printStackTrace();
                 }
             }
-            // TODO find the right place to notify clients about changed invoice state
-            sendInvoiceStateChangeToCallbackClients(bcInvoice.invoice, bcInvoice.getState());
+//            // TODO find the right place to notify clients about changed invoice state
+//            sendInvoiceStateChangeToCallbackClients(bcInvoice.invoice, bcInvoice.getState());
         }
 
         // cleanup expired transactions
@@ -257,5 +260,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener {
             client.invoiceStateChanged(invoice,state);
         }
 
+    }
+
+    @Override
+    public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
+        sendInvoiceStateChangeToCallbackClients(invoice.invoice,state);
     }
 }
