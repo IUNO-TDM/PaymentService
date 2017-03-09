@@ -67,13 +67,11 @@ class BitcoinInvoice {
         @Override
         public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
             if(bitcoinInvoiceCallbackInterface != null){
-                State state = getStateForTransaction(payingTx,confidence);
+                State state = mapConfidenceToState(confidence);
                 bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
             }
         }
     };
-
-
 
     /**
      * This constructor checks a new invoice for sanity.
@@ -144,19 +142,16 @@ class BitcoinInvoice {
     }
 
     State getState() {
-
-        return getStateForTransaction(payingTx,null);
+        TransactionConfidence confidence = null;
+        if (null != payingTx) confidence = payingTx.getConfidence();
+        return mapConfidenceToState(confidence);
     }
 
-    private State getStateForTransaction(Transaction transaction,TransactionConfidence confidence) {
+    static public State mapConfidenceToState(TransactionConfidence conf) {
         State result = new State();
         result.setState(State.StateEnum.UNKNOWN);
         result.setDepthInBlocks(Integer.MIN_VALUE);
-        if (transaction != null) {
-            TransactionConfidence conf = confidence;
-            if (conf == null) {
-                conf = transaction.getConfidence();
-            }
+        if (conf != null) {
             switch (conf.getConfidenceType()) {
                 case BUILDING:
                     result.setState(State.StateEnum.BUILDING);
@@ -173,9 +168,7 @@ class BitcoinInvoice {
                 case UNKNOWN:
                 default:
             }
-
         }
-
 
         return result;
     }
