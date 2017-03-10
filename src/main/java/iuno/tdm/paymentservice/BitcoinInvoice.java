@@ -24,8 +24,10 @@ import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,7 +61,13 @@ class BitcoinInvoice {
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
 
+    /**
+     * This member will be set to the transaction that paid this invoice.
+     */
     private Transaction payingTx;
+    /**
+     * This member will be set to the transaction that paid the transfers of this invoice.
+     */
     private Transaction transferTx;
 
     class PayedAddress {
@@ -87,11 +95,15 @@ class BitcoinInvoice {
 
     class Coupon {
         final ECKey ecKey;
+        long value;
         Map<Sha256Hash, Transaction> transactions = null;
         Coupon(ECKey ecKey) {
             this.ecKey = ecKey;
         }
     }
+    final KeyChainGroup group = new KeyChainGroup(params);
+    final Wallet couponWallet = new Wallet(params, group);
+
     Vector<Coupon> coupons = new Vector<>();
 
     AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
@@ -101,16 +113,44 @@ class BitcoinInvoice {
         final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
         final String response = getUtxoString(pubKeyHash);
         logger.info(response);
-
-        coupon.transactions = getTransactionsForUtxoString(response);
-
-        long satoshis = getSatoshisFromUtxoString(response);
-
+        coupon.value = getSatoshisFromUtxoString(response);
         coupons.add(coupon);
 
-        // TODO add coupon UTXOs to wallet
+        // add key and unspent transactions to wallet
+        group.importKeys(coupon.ecKey);
+        coupon.transactions = getTransactionsForUtxoString(response);
+        for (final Transaction tx : coupon.transactions.values())
+            couponWallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, tx));
 
-        return new AddressValuePair().address(pubKeyHash).coin(satoshis);
+        return new AddressValuePair().address(pubKeyHash).coin(coupon.value);
+    }
+
+    public Wallet getCouponWallet() {
+        return couponWallet;
+    }
+
+    Transaction tryPayWithCoupons() {
+        Transaction result = null;
+        long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
+        if (null != payingTx) {
+            logger.info("Transaction has already been paid");
+
+        } else if (balance < totalAmount) {
+            logger.info("Too few coupons in wallet: " + couponWallet.getBalance().toFriendlyString());
+
+        } else {
+            SendRequest sr = SendRequest.emptyWallet(payDirect); // TODO fee is missing for complete payment
+//            SendRequest sr = SendRequest.emptyWallet(payTransfers);
+            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+//            addTransfersToTx(sr.tx);
+            try {
+                result = couponWallet.sendCoinsOffline(sr);
+            } catch (InsufficientMoneyException e) { // should never happen
+                e.printStackTrace();
+            }
+        }
+
+        return result;
     }
 
     static public String getUtxoString(String b58) throws IOException {
@@ -332,17 +372,22 @@ class BitcoinInvoice {
         for (TransactionInput txin : getInputs())
             tx.addInput(txin);
 
-        // add transfer outputs
-        for (PayedAddress pa : payedAddresses.values()) {
-            if (! payTransfers.equals(pa.address))
-                tx.addOutput(pa.targetValue, pa.address);
-        }
+        addTransfersToTx(tx);
+
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
         transferTx = tx;
         logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
+    }
+
+    private void addTransfersToTx(Transaction tx) {
+        // add transfer outputs
+        for (PayedAddress pa : payedAddresses.values()) {
+            if (! payTransfers.equals(pa.address))
+                tx.addOutput(pa.targetValue, pa.address);
+        }
     }
 
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {

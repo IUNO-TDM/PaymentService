@@ -43,7 +43,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             return Response.status(404).entity(err).build();
 
         } catch (IllegalStateException e) { // invoice finished or expired
-            err.setMessage(e.getMessage() + ": " + invoiceId);
+            err.setMessage(String.format("%s %s", e.getMessage(), invoiceId));
             return Response.status(409).entity(err).build();
 
         } catch (AddressFormatException e) { // unparseable coupon code
@@ -88,7 +88,6 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             bc.deleteInvoiceById(invoiceId);
             return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
-        // TODO: there will be no NullPointerException - remove on a hashmap will always succeed
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);

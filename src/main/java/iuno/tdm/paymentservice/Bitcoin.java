@@ -157,6 +157,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
+        peerGroup.addWallet(bcInvoice.getCouponWallet());
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -166,7 +167,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     }
 
     public AddressValuePair addCoupon(UUID id, String key) throws IOException {
-        return invoiceHashMap.get(id).addCoupon(key);
+        BitcoinInvoice invoice = invoiceHashMap.get(id);
+        AddressValuePair avp = invoice.addCoupon(key);
+        Transaction tx = invoice.tryPayWithCoupons();
+        if (null != tx)
+            peerGroup.broadcastTransaction(tx).broadcast();
+        return avp;
     }
 
     /**
@@ -192,6 +198,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     }
 
     public void deleteInvoiceById(UUID id) {
+        peerGroup.removeWallet(invoiceHashMap.get(id).getCouponWallet());
         invoiceHashMap.remove(id);
     }
 
