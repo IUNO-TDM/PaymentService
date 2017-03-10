@@ -165,6 +165,13 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         return invoiceId;
     }
 
+    public AddressValuePair addCoupon(UUID id, String key) throws IOException {
+        return invoiceHashMap.get(id).addCoupon(key);
+    }
+
+    /**
+     * @deprecated
+     */
     public Invoice getInvoiceById(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).invoice;
     }

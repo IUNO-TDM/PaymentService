@@ -17,6 +17,7 @@
  */
 package iuno.tdm.paymentservice;
 
+import com.google.common.io.BaseEncoding;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
@@ -24,10 +25,20 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.*;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import static com.google.common.base.Preconditions.checkState;
 
 
 /**
@@ -72,6 +83,119 @@ class BitcoinInvoice {
             }
         }
     };
+
+
+    class Coupon {
+        final ECKey ecKey;
+        Map<Sha256Hash, Transaction> transactions = null;
+        Coupon(ECKey ecKey) {
+            this.ecKey = ecKey;
+        }
+    }
+    Vector<Coupon> coupons = new Vector<>();
+
+    AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
+        if (isExpired()) throw new IllegalStateException("invoice is already expired");
+
+        Coupon coupon = new Coupon(DumpedPrivateKey.fromBase58(params, key).getKey());
+        final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
+        final String response = getUtxoString(pubKeyHash);
+        logger.info(response);
+
+        coupon.transactions = getTransactionsForUtxoString(response);
+
+        long satoshis = getSatoshisFromUtxoString(response);
+
+        coupons.add(coupon);
+
+        // TODO add coupon UTXOs to wallet
+
+        return new AddressValuePair().address(pubKeyHash).coin(satoshis);
+    }
+
+    static public String getUtxoString(String b58) throws IOException {
+        URL url;
+        String response = "";
+        url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
+        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+        String line;
+        while ((line = in.readLine()) != null) {
+            response += line;
+        }
+        return response;
+    }
+
+    private long getSatoshisFromUtxoString(String str) {
+        final JSONArray json = new JSONArray(str);
+        long value = 0;
+        for (int i = 0; i < json.length(); i++) { // TODO two times the same for loop is inefficient
+            final JSONObject jsonObject = json.getJSONObject(i);
+            value += jsonObject.getLong("satoshis"); // satoshis
+        }
+        return value;
+    }
+
+    private Map<Sha256Hash, Transaction> getTransactionsForUtxoString(String str) {
+        final JSONArray json = new JSONArray(str);
+
+        logger.info("Array length: " + json.length());
+
+        final Map<Sha256Hash, Transaction> transactions = new HashMap<>(json.length());
+
+        for (int i = 0; i < json.length(); i++) { // TODO two times the same for loop is inefficient
+            final JSONObject jsonObject = json.getJSONObject(i);
+            final String txId = jsonObject.getString("txid");
+            final Sha256Hash utxoHash = Sha256Hash.wrap(txId); // txid
+            final int utxoIndex = jsonObject.getInt("vout"); // vout
+            final byte[] utxoScriptBytes = BaseEncoding.base16().lowerCase().decode(
+                    jsonObject.getString("scriptPubKey"));
+            final Coin utxoValue = Coin.valueOf(jsonObject.getLong("satoshis")); // satoshis
+
+            Transaction tx = transactions.get(utxoHash);
+            if (tx == null) {
+                tx = new FakeTransaction(params, utxoHash);
+                tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
+                transactions.put(utxoHash, tx);
+            }
+
+            final TransactionOutput output = new TransactionOutput(params, tx, utxoValue, utxoScriptBytes);
+
+            if (tx.getOutputs().size() > utxoIndex) {
+                // Work around not being able to replace outputs on transactions
+                final List<TransactionOutput> outputs = new ArrayList<>(tx.getOutputs());
+                final TransactionOutput dummy = outputs.set(utxoIndex, output);
+                checkState(dummy.getValue().equals(Coin.NEGATIVE_SATOSHI),
+                        "Index %s must be dummy output", utxoIndex);
+                // Remove and re-add all outputs
+                tx.clearOutputs();
+                for (final TransactionOutput o : outputs)
+                    tx.addOutput(o);
+            } else {
+                // Fill with dummies as needed
+                while (tx.getOutputs().size() < utxoIndex)
+                    tx.addOutput(new TransactionOutput(params, tx,
+                            Coin.NEGATIVE_SATOSHI, new byte[]{}));
+
+                // Add the real output
+                tx.addOutput(output);
+            }
+        }
+        return transactions;
+    }
+
+    private static class FakeTransaction extends Transaction {
+        private final Sha256Hash hash;
+
+        private FakeTransaction(final NetworkParameters params, final Sha256Hash hash) {
+            super(params);
+            this.hash = hash;
+        }
+
+        @Override
+        public Sha256Hash getHash() {
+            return hash;
+        }
+    }
 
     /**
      * This constructor checks a new invoice for sanity.
@@ -172,8 +296,6 @@ class BitcoinInvoice {
 
         return result;
     }
-
-
 
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();

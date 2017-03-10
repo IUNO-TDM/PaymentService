@@ -183,6 +183,10 @@ paths:
           description: balance of coupon could not be retrieved
           schema:
             $ref: '#/definitions/Error'
+        422:
+          description: coupon code is invalid
+          schema:
+            $ref: '#/definitions/Error'
         409:
           description: invoice already closed
           schema:
