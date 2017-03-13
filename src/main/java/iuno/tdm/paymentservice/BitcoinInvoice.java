@@ -274,6 +274,8 @@ class BitcoinInvoice {
         payDirect = addr;
         payTransfers = addr2;
 
+        couponWallet.allowSpendingUnconfirmedTransactions();
+
         payedAddresses.put(payTransfers, new PayedAddress(payTransfers, Coin.valueOf(transferAmount)));
     }
 
