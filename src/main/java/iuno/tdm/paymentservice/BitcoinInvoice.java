@@ -160,6 +160,7 @@ class BitcoinInvoice {
                 result = sr.tx;
                 payingTx = sr.tx;
                 transferTx = sr.tx;
+                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
