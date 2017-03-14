@@ -129,6 +129,10 @@ class BitcoinInvoice {
         return couponWallet;
     }
 
+    /**
+     * Tries to pay the invoice using coupons.
+     * @return null or signed transaction ready for broadcasting
+     */
     Transaction tryPayWithCoupons() {
         Transaction result = null;
         long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
@@ -139,12 +143,23 @@ class BitcoinInvoice {
             logger.info("Too few coupons in wallet: " + couponWallet.getBalance().toFriendlyString());
 
         } else {
-            SendRequest sr = SendRequest.emptyWallet(payDirect); // TODO fee is missing for complete payment
-//            SendRequest sr = SendRequest.emptyWallet(payTransfers);
+            Transaction tx = new Transaction(params);
+            addTransfersToTx(tx);
+            SendRequest sr = SendRequest.forTx(tx);
             sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-//            addTransfersToTx(sr.tx);
+            if (balance > (totalAmount + 2*Transaction.MIN_NONDUST_OUTPUT.getValue())) {
+                sr.tx.addOutput(Coin.valueOf(totalAmount-transferAmount), payTransfers);
+                sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
+            } else {
+                sr.changeAddress = payTransfers;
+            }
+
             try {
-                result = couponWallet.sendCoinsOffline(sr);
+                couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
+                couponWallet.commitTx(sr.tx);
+                result = sr.tx;
+                payingTx = sr.tx;
+                transferTx = sr.tx;
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -331,6 +346,7 @@ class BitcoinInvoice {
                     result.setState(State.StateEnum.DEAD);
                     result.setDepthInBlocks(Integer.MIN_VALUE);
                     break;
+                case IN_CONFLICT:
                 case UNKNOWN:
                 default:
             }
@@ -399,6 +415,7 @@ class BitcoinInvoice {
             if ( ! (foo.keySet().contains(pa.address))
                     || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
                 result = false;
+                break;
             }
         }
 
