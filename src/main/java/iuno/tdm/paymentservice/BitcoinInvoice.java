@@ -41,8 +41,8 @@ class BitcoinInvoice {
     private long transferAmount = 0;
 
     private Date expiration;
-    private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
-    private Address payTransfers;
+    private Address payDirectAddress; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
+    private Address payTransfersAddress;
     Invoice invoice;
     private Logger logger;
 
@@ -50,6 +50,7 @@ class BitcoinInvoice {
 
     private Transaction payingTx;
     private Transaction transferTx;
+
 
     class PayedAddress {
         final Address address;
@@ -75,12 +76,11 @@ class BitcoinInvoice {
 
     /**
      * This constructor checks a new invoice for sanity.
-     * @param id unique id of invoice object
      * @param inv invoice as defined in restful api
-     * @param addr address for incoming payment (likely the payments service own wallet)
+     * @param payDirectAddress address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface) throws IllegalArgumentException {
+    BitcoinInvoice(Invoice inv, Address payDirectAddress, Address payTransfersAddress, BitcoinInvoiceCallbackInterface callbackInterface) throws IllegalArgumentException {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         bitcoinInvoiceCallbackInterface = callbackInterface;
         // check sanity of invoice
@@ -105,12 +105,11 @@ class BitcoinInvoice {
         if (isExpired())
             throw new IllegalArgumentException("expiration date must be in the future");
 
-        inv.setInvoiceId(id);
         invoice = inv;
-        payDirect = addr;
-        payTransfers = addr2;
+        this.payDirectAddress = payDirectAddress;
+        this.payTransfersAddress = payTransfersAddress;
 
-        payedAddresses.put(payTransfers, new PayedAddress(payTransfers, Coin.valueOf(transferAmount)));
+        payedAddresses.put(this.payTransfersAddress, new PayedAddress(this.payTransfersAddress, Coin.valueOf(transferAmount)));
     }
 
     /**
@@ -126,7 +125,7 @@ class BitcoinInvoice {
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(payDirect, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
+        return BitcoinURI.convertToBitcoinURI(payDirectAddress, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
     }
 
     /**
@@ -137,7 +136,7 @@ class BitcoinInvoice {
         List<AddressValuePair> transfers = new Vector<>();
         transfers.addAll(invoice.getTransfers());
         long difference = totalAmount - transferAmount;
-        transfers.add(new AddressValuePair().address(payTransfers.toBase58()).coin(difference));
+        transfers.add(new AddressValuePair().address(payTransfersAddress.toBase58()).coin(difference));
         return transfers;
     }
 
@@ -178,7 +177,7 @@ class BitcoinInvoice {
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
         for (TransactionOutput tout : payingTx.getOutputs()) {
-            if (payDirect.equals(tout.getAddressFromP2PKHScript(params))
+            if (payDirectAddress.equals(tout.getAddressFromP2PKHScript(params))
                     && tout.isAvailableForSpending()) {
                 int index = tout.getIndex();
                 TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, payingTx);
@@ -190,6 +189,34 @@ class BitcoinInvoice {
             }
         }
         return inputs;
+    }
+
+    public Invoice getInvoice(){
+        return invoice;
+    }
+
+    public Address getPayDirectAddress(){
+        return payDirectAddress;
+    }
+
+    public Address getPayTransfersAddress(){
+        return payTransfersAddress;
+    }
+
+    public Transaction getPayingTx(){
+        return payingTx;
+    }
+
+    public Transaction getTransferTx(){
+        return transferTx;
+    }
+
+    void setTransferTx(Transaction transferTx) {
+        this.transferTx = transferTx;
+    }
+
+    void setPayingTx(Transaction payingTx) {
+        this.payingTx = payingTx;
     }
 
     SendRequest tryFinishInvoice() {
@@ -212,7 +239,7 @@ class BitcoinInvoice {
 
         // add transfer outputs
         for (PayedAddress pa : payedAddresses.values()) {
-            if (! payTransfers.equals(pa.address))
+            if (! payTransfersAddress.equals(pa.address))
                 tx.addOutput(pa.targetValue, pa.address);
         }
         tx.setMemo(invoiceId.toString());
@@ -243,21 +270,21 @@ class BitcoinInvoice {
      */
     public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> foo) {
 
-        if (foo.keySet().contains(payDirect)) {
-            long value = foo.get(payDirect).getValue();
+        if (foo.keySet().contains(payDirectAddress)) {
+            long value = foo.get(payDirectAddress).getValue();
             if (totalAmount <= value) { // transaction fulfills direct payment
                 logger.info("Received direct payment for invoice " + invoice.getInvoiceId().toString()
-                        + " to " + payDirect
-                        + " with " + foo.get(payDirect).toFriendlyString());
+                        + " to " + payDirectAddress
+                        + " with " + foo.get(payDirectAddress).toFriendlyString());
                 payingTx = tx;
                 payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
                 payingTransactionConfidenceListener.onConfidenceChanged(payingTx.getConfidence(),null);
             }
 
-        } else if (foo.keySet().contains(payTransfers)) {
+        } else if (foo.keySet().contains(payTransfersAddress)) {
             if (doesTxFulfillTransferPayment(foo)) {
                 logger.info("Received transfer payment for invoice " + invoice.getInvoiceId().toString()
-                        + " to " + payTransfers);
+                        + " to " + payTransfersAddress);
                 payingTx = tx;
                 transferTx = tx;
                 payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);

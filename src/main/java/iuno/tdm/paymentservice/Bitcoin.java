@@ -67,6 +67,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     private static Bitcoin instance;
 
+
+    private BitcoinInvoicePersistence bitcoinInvoicePersistence;
+
     private Bitcoin() {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         BriefLogFormatter.initWithSilentBitcoinJ();
@@ -85,7 +88,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         String homeDir = System.getProperty("user.home");
         File chainFile = new File(homeDir, PREFIX + ".spvchain");
         File walletFile = new File(homeDir, PREFIX + ".wallet");
-
+        File persistenceFile = new File(homeDir, PREFIX + ".persistence");
+//        bitcoinInvoicePersistence      = new BitcoinInvoicePersistence(persistenceFile);
         // create new wallet system
         try {
             wallet = Wallet.loadFromFile(walletFile);
@@ -136,6 +140,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                     }
                 }
         );
+
+
+//        invoiceHashMap = bitcoinInvoicePersistence.restoreBitcoinInvoices(this, wallet);
     }
 
     public void stop() {
@@ -156,10 +163,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
+        inv.setInvoiceId(invoiceId);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
+//        bitcoinInvoicePersistence.AddBitcoinInvoice(bcInvoice);
         logger.info("Added invoice " + invoiceId.toString() + " to hashmap.");
         logger.info(invoiceId.toString() + " - " + bcInvoice.getBip21URI());
         return invoiceId;

@@ -38,6 +38,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                     @Override
                     public Object onEvent(String name, Object[] args, boolean ackRequested) {
                         if (args[0].getClass().equals(String.class)) {
+                            logger.debug("A SocketIO client is joining room " + args[0]);
                             socket.join((String) args[0]);
                             try{
                                 BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String)args[0]));
