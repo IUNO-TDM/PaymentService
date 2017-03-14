@@ -347,6 +347,9 @@ class BitcoinInvoice {
                     result.setDepthInBlocks(Integer.MIN_VALUE);
                     break;
                 case IN_CONFLICT:
+                    result.setState(State.StateEnum.CONFLICT);
+                    result.setDepthInBlocks(Integer.MIN_VALUE);
+                    break;
                 case UNKNOWN:
                 default:
             }

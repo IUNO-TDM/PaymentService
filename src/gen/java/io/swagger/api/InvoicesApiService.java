@@ -19,7 +19,7 @@ import java.io.InputStream;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T14:06:02.497Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-14T13:03:20.565Z")
 public abstract class InvoicesApiService {
     public abstract Response addCouponToInvoice(UUID invoiceId,String coupon,SecurityContext securityContext) throws NotFoundException;
     public abstract Response addInvoice(Invoice invoice,SecurityContext securityContext) throws NotFoundException;

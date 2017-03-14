@@ -300,6 +300,7 @@ definitions:
         - pending
         - dead
         - unknown
+        - conflict
       depthInBlocks:
         type: integer
         format: int32
