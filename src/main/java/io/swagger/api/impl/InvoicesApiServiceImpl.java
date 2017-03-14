@@ -8,6 +8,7 @@ import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
 
+import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.UUID;
@@ -17,6 +18,8 @@ import io.swagger.api.NotFoundException;
 
 import java.io.InputStream;
 
+import org.bitcoinj.core.AddressFormatException;
+import org.bitcoinj.core.WrongNetworkException;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import javax.ws.rs.core.MediaType;
@@ -30,8 +33,29 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
 
     @Override
     public Response addCouponToInvoice(UUID invoiceId, String coupon, SecurityContext securityContext) throws NotFoundException {
-        // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        Error err = new Error();
+        try {
+            AddressValuePair avp = bc.addCoupon(invoiceId, coupon);
+            return Response.ok().entity(avp).build();
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            return Response.status(404).entity(err).build();
+
+        } catch (IllegalStateException e) { // invoice finished or expired
+            err.setMessage(String.format("%s %s", e.getMessage(), invoiceId));
+            return Response.status(409).entity(err).build();
+
+        } catch (AddressFormatException e) { // unparseable coupon code
+            err.setMessage("the passed coupon code is invalid");
+            return Response.status(422).entity(err).build();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+            err.setMessage("could not get coupon value from remote host for " + invoiceId);
+            return Response.status(503).entity(err).build();
+        }
+        // TODO catch more exceptions: 503 balance of coupon could not be retrieved
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
@@ -64,7 +88,6 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             bc.deleteInvoiceById(invoiceId);
             return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
-        // TODO: there will be no NullPointerException - remove on a hashmap will always succeed
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);

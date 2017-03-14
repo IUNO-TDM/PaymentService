@@ -167,6 +167,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.json</groupId>
+            <artifactId>json</artifactId>
+            <version>20160810</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.codeminders.socketio</groupId>
             <artifactId>socketio-server-core</artifactId>
             <version>1.0.2</version>

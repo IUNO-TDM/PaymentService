@@ -17,17 +17,30 @@
  */
 package iuno.tdm.paymentservice;
 
+import com.google.common.io.BaseEncoding;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
+import org.bitcoinj.wallet.KeyChainGroup;
 import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.WalletTransaction;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.*;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import static com.google.common.base.Preconditions.checkState;
 
 
 /**
@@ -48,7 +61,13 @@ class BitcoinInvoice {
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
 
+    /**
+     * This member will be set to the transaction that paid this invoice.
+     */
     private Transaction payingTx;
+    /**
+     * This member will be set to the transaction that paid the transfers of this invoice.
+     */
     private Transaction transferTx;
 
     class PayedAddress {
@@ -72,6 +91,166 @@ class BitcoinInvoice {
             }
         }
     };
+
+
+    class Coupon {
+        final ECKey ecKey;
+        long value;
+        Map<Sha256Hash, Transaction> transactions = null;
+        Coupon(ECKey ecKey) {
+            this.ecKey = ecKey;
+        }
+    }
+    final KeyChainGroup group = new KeyChainGroup(params);
+    final Wallet couponWallet = new Wallet(params, group);
+
+    Vector<Coupon> coupons = new Vector<>();
+
+    AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
+        if (isExpired()) throw new IllegalStateException("invoice is already expired");
+
+        Coupon coupon = new Coupon(DumpedPrivateKey.fromBase58(params, key).getKey());
+        final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
+        final String response = getUtxoString(pubKeyHash);
+        logger.info(response);
+        coupon.value = getSatoshisFromUtxoString(response);
+        coupons.add(coupon);
+
+        // add key and unspent transactions to wallet
+        group.importKeys(coupon.ecKey);
+        coupon.transactions = getTransactionsForUtxoString(response);
+        for (final Transaction tx : coupon.transactions.values())
+            couponWallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, tx));
+
+        return new AddressValuePair().address(pubKeyHash).coin(coupon.value);
+    }
+
+    public Wallet getCouponWallet() {
+        return couponWallet;
+    }
+
+    /**
+     * Tries to pay the invoice using coupons.
+     * @return null or signed transaction ready for broadcasting
+     */
+    Transaction tryPayWithCoupons() {
+        Transaction result = null;
+        long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
+        if (null != payingTx) {
+            logger.info("Transaction has already been paid");
+
+        } else if (balance < totalAmount) {
+            logger.info("Too few coupons in wallet: " + couponWallet.getBalance().toFriendlyString());
+
+        } else {
+            Transaction tx = new Transaction(params);
+            addTransfersToTx(tx);
+            SendRequest sr = SendRequest.forTx(tx);
+            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            if (balance > (totalAmount + 2*Transaction.MIN_NONDUST_OUTPUT.getValue())) {
+                sr.tx.addOutput(Coin.valueOf(totalAmount-transferAmount), payTransfers);
+                sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
+            } else {
+                sr.changeAddress = payTransfers;
+            }
+
+            try {
+                couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
+                couponWallet.commitTx(sr.tx);
+                result = sr.tx;
+                payingTx = sr.tx;
+                transferTx = sr.tx;
+            } catch (InsufficientMoneyException e) { // should never happen
+                e.printStackTrace();
+            }
+        }
+
+        return result;
+    }
+
+    static public String getUtxoString(String b58) throws IOException {
+        URL url;
+        String response = "";
+        url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
+        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+        String line;
+        while ((line = in.readLine()) != null) {
+            response += line;
+        }
+        return response;
+    }
+
+    private long getSatoshisFromUtxoString(String str) {
+        final JSONArray json = new JSONArray(str);
+        long value = 0;
+        for (int i = 0; i < json.length(); i++) { // TODO two times the same for loop is inefficient
+            final JSONObject jsonObject = json.getJSONObject(i);
+            value += jsonObject.getLong("satoshis"); // satoshis
+        }
+        return value;
+    }
+
+    private Map<Sha256Hash, Transaction> getTransactionsForUtxoString(String str) {
+        final JSONArray json = new JSONArray(str);
+
+        logger.info("Array length: " + json.length());
+
+        final Map<Sha256Hash, Transaction> transactions = new HashMap<>(json.length());
+
+        for (int i = 0; i < json.length(); i++) { // TODO two times the same for loop is inefficient
+            final JSONObject jsonObject = json.getJSONObject(i);
+            final String txId = jsonObject.getString("txid");
+            final Sha256Hash utxoHash = Sha256Hash.wrap(txId); // txid
+            final int utxoIndex = jsonObject.getInt("vout"); // vout
+            final byte[] utxoScriptBytes = BaseEncoding.base16().lowerCase().decode(
+                    jsonObject.getString("scriptPubKey"));
+            final Coin utxoValue = Coin.valueOf(jsonObject.getLong("satoshis")); // satoshis
+
+            Transaction tx = transactions.get(utxoHash);
+            if (tx == null) {
+                tx = new FakeTransaction(params, utxoHash);
+                tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
+                transactions.put(utxoHash, tx);
+            }
+
+            final TransactionOutput output = new TransactionOutput(params, tx, utxoValue, utxoScriptBytes);
+
+            if (tx.getOutputs().size() > utxoIndex) {
+                // Work around not being able to replace outputs on transactions
+                final List<TransactionOutput> outputs = new ArrayList<>(tx.getOutputs());
+                final TransactionOutput dummy = outputs.set(utxoIndex, output);
+                checkState(dummy.getValue().equals(Coin.NEGATIVE_SATOSHI),
+                        "Index %s must be dummy output", utxoIndex);
+                // Remove and re-add all outputs
+                tx.clearOutputs();
+                for (final TransactionOutput o : outputs)
+                    tx.addOutput(o);
+            } else {
+                // Fill with dummies as needed
+                while (tx.getOutputs().size() < utxoIndex)
+                    tx.addOutput(new TransactionOutput(params, tx,
+                            Coin.NEGATIVE_SATOSHI, new byte[]{}));
+
+                // Add the real output
+                tx.addOutput(output);
+            }
+        }
+        return transactions;
+    }
+
+    private static class FakeTransaction extends Transaction {
+        private final Sha256Hash hash;
+
+        private FakeTransaction(final NetworkParameters params, final Sha256Hash hash) {
+            super(params);
+            this.hash = hash;
+        }
+
+        @Override
+        public Sha256Hash getHash() {
+            return hash;
+        }
+    }
 
     /**
      * This constructor checks a new invoice for sanity.
@@ -109,6 +288,8 @@ class BitcoinInvoice {
         invoice = inv;
         payDirect = addr;
         payTransfers = addr2;
+
+        couponWallet.allowSpendingUnconfirmedTransactions();
 
         payedAddresses.put(payTransfers, new PayedAddress(payTransfers, Coin.valueOf(transferAmount)));
     }
@@ -165,6 +346,7 @@ class BitcoinInvoice {
                     result.setState(State.StateEnum.DEAD);
                     result.setDepthInBlocks(Integer.MIN_VALUE);
                     break;
+                case IN_CONFLICT:
                 case UNKNOWN:
                 default:
             }
@@ -172,8 +354,6 @@ class BitcoinInvoice {
 
         return result;
     }
-
-
 
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
@@ -210,17 +390,22 @@ class BitcoinInvoice {
         for (TransactionInput txin : getInputs())
             tx.addInput(txin);
 
-        // add transfer outputs
-        for (PayedAddress pa : payedAddresses.values()) {
-            if (! payTransfers.equals(pa.address))
-                tx.addOutput(pa.targetValue, pa.address);
-        }
+        addTransfersToTx(tx);
+
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
         transferTx = tx;
         logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
+    }
+
+    private void addTransfersToTx(Transaction tx) {
+        // add transfer outputs
+        for (PayedAddress pa : payedAddresses.values()) {
+            if (! payTransfers.equals(pa.address))
+                tx.addOutput(pa.targetValue, pa.address);
+        }
     }
 
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
@@ -230,6 +415,7 @@ class BitcoinInvoice {
             if ( ! (foo.keySet().contains(pa.address))
                     || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
                 result = false;
+                break;
             }
         }
 

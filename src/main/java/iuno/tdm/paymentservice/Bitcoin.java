@@ -157,6 +157,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
+        Wallet couponWallet = bcInvoice.getCouponWallet();
+        couponWallet.addCoinsReceivedEventListener(this);
+        peerGroup.addWallet(couponWallet);
 
         // add invoice to hashMap
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -165,6 +168,18 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         return invoiceId;
     }
 
+    public AddressValuePair addCoupon(UUID id, String key) throws IOException {
+        BitcoinInvoice invoice = invoiceHashMap.get(id);
+        AddressValuePair avp = invoice.addCoupon(key);
+        Transaction tx = invoice.tryPayWithCoupons();
+        if (null != tx)
+            peerGroup.broadcastTransaction(tx).broadcast();
+        return avp;
+    }
+
+    /**
+     * @deprecated
+     */
     public Invoice getInvoiceById(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id).invoice;
     }
@@ -185,6 +200,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     }
 
     public void deleteInvoiceById(UUID id) {
+        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
+        Wallet couponWallet = bcInvoice.getCouponWallet();
+        peerGroup.removeWallet(couponWallet);
+        couponWallet.removeCoinsReceivedEventListener(this);
         invoiceHashMap.remove(id);
     }
 
@@ -226,6 +245,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
             bcInvoice.sortOutputsToAddresses(tx, foo);
 
+            Transaction txCoupon = bcInvoice.tryPayWithCoupons();
+            if (null != txCoupon) {
+                peerGroup.broadcastTransaction(txCoupon).broadcast();
+                continue;
+            }
+
             SendRequest sr = bcInvoice.tryFinishInvoice();
             if (null != sr) {
                 try {
@@ -236,8 +261,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                     e.printStackTrace();
                 }
             }
-//            // TODO find the right place to notify clients about changed invoice state
-//            sendInvoiceStateChangeToCallbackClients(bcInvoice.invoice, bcInvoice.getState());
         }
 
         // cleanup expired transactions
