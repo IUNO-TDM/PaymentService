@@ -177,12 +177,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         return avp;
     }
 
-    /**
-     * @deprecated
-     */
-    public Invoice getInvoiceById(UUID id) throws NullPointerException {
-        return invoiceHashMap.get(id).invoice;
-    }
     public BitcoinInvoice getBitcoinInvoiceById(UUID id) throws NullPointerException {
         return invoiceHashMap.get(id);
     }

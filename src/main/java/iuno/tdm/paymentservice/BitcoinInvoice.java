@@ -48,7 +48,7 @@ import static com.google.common.base.Preconditions.checkState;
  * or by completing all transfers in one single transaction.
  */
 
-class BitcoinInvoice {
+public class BitcoinInvoice {
     private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private long totalAmount = 0;
     private long transferAmount = 0;
@@ -56,7 +56,7 @@ class BitcoinInvoice {
     private Date expiration;
     private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     private Address payTransfers;
-    Invoice invoice;
+    public  Invoice invoice; // TODO shall not be public
     private Logger logger;
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
