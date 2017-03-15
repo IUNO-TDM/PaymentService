@@ -52,11 +52,11 @@ public class BitcoinInvoice {
     private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
     private long totalAmount = 0;
     private long transferAmount = 0;
-
+    private UUID invoiceId;
+    private String referenceId;
     private Date expiration;
     private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     private Address payTransfers;
-    public  Invoice invoice; // TODO shall not be public
     private Logger logger;
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
@@ -70,17 +70,25 @@ public class BitcoinInvoice {
      */
     private Transaction transferTx;
 
-    class PayedAddress {
+    class TransferPair {
         final Address address;
         final Coin targetValue;
 
-        PayedAddress(Address a, Coin target) {
+        TransferPair(Address a, Coin target) {
             address = a;
             targetValue = target;
         }
-    }
-    private HashMap<Address, PayedAddress> payedAddresses = new HashMap<>(); // TODO maybe a simple list is enough
 
+        AddressValuePair getAddressValuePair() {
+            return new AddressValuePair().address(address.toBase58()).coin(targetValue.getValue());
+        }
+    }
+
+    /**
+     * This member contains all address value pairs for transfer payments.
+     * It does not contain any payments to the payment services own wallet.
+     */
+    private List<TransferPair> transfers = new Vector<>();
 
     private TransactionConfidence.Listener payingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
         @Override
@@ -101,7 +109,7 @@ public class BitcoinInvoice {
             this.ecKey = ecKey;
         }
     }
-    final KeyChainGroup group = new KeyChainGroup(params);
+    final KeyChainGroup group = new KeyChainGroup(params); // TODO this takes an awful lot of time on raspberry pi
     final Wallet couponWallet = new Wallet(params, group);
 
     Vector<Coupon> coupons = new Vector<>();
@@ -275,7 +283,7 @@ public class BitcoinInvoice {
             if (value < Transaction.MIN_NONDUST_OUTPUT.getValue())
                 throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
             transferAmount += value;
-            payedAddresses.put(a, new PayedAddress(a, Coin.valueOf(value)));
+            transfers.add(new TransferPair(a, Coin.valueOf(value)));
         }
         if (totalAmount < (transferAmount + Transaction.MIN_NONDUST_OUTPUT.getValue()))
             throw new IllegalArgumentException("total invoice amount minus sum of transfer amounts is dust");
@@ -285,14 +293,23 @@ public class BitcoinInvoice {
         if (isExpired())
             throw new IllegalArgumentException("expiration date must be in the future");
 
-        inv.setInvoiceId(id);
-        invoice = inv;
+        invoiceId = id;
+        referenceId = inv.getReferenceId();
         payDirect = addr;
         payTransfers = addr2;
 
         couponWallet.allowSpendingUnconfirmedTransactions();
+    }
 
-        payedAddresses.put(payTransfers, new PayedAddress(payTransfers, Coin.valueOf(transferAmount)));
+    public Invoice getInvoice() {
+        Invoice result = new Invoice()
+                .totalAmount(totalAmount)
+                .expiration(expiration)
+                .invoiceId(invoiceId)
+                .referenceId(referenceId);
+        for (TransferPair pa : transfers)
+            result.addTransfersItem(pa.getAddressValuePair());
+        return result;
     }
 
     /**
@@ -313,14 +330,17 @@ public class BitcoinInvoice {
 
     /**
      * Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
-     * @return the address value/pairs for the invoice as array
+     * The address value pair of the own wallet is added to the transfers as well.
+     * @return the address value/pairs to fulfill the invoice as array
      */
     List<AddressValuePair> getTransfers() {
-        List<AddressValuePair> transfers = new Vector<>();
-        transfers.addAll(invoice.getTransfers());
+        List<AddressValuePair> avpList = new Vector<>();
+        for (TransferPair pa : transfers)
+            avpList.add(pa.getAddressValuePair());
+
         long difference = totalAmount - transferAmount;
-        transfers.add(new AddressValuePair().address(payTransfers.toBase58()).coin(difference));
-        return transfers;
+        avpList.add(new AddressValuePair().address(payTransfers.toBase58()).coin(difference));
+        return avpList;
     }
 
     State getState() {
@@ -377,7 +397,6 @@ public class BitcoinInvoice {
     }
 
     SendRequest tryFinishInvoice() {
-        UUID invoiceId = invoice.getInvoiceId();
         if (null == payingTx) {
             logger.info("Invoice " + invoiceId.toString() + " has not yet been paid.");
             return null;
@@ -406,20 +425,24 @@ public class BitcoinInvoice {
 
     private void addTransfersToTx(Transaction tx) {
         // add transfer outputs
-        for (PayedAddress pa : payedAddresses.values()) {
-            if (! payTransfers.equals(pa.address))
-                tx.addOutput(pa.targetValue, pa.address);
+        for (TransferPair pa : transfers) {
+            tx.addOutput(pa.targetValue, pa.address);
         }
     }
 
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
         boolean result = true;
 
-        for (PayedAddress pa : payedAddresses.values()) {
-            if ( ! (foo.keySet().contains(pa.address))
-                    || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
-                result = false;
-                break;
+        if (( ! foo.keySet().contains(payTransfers)) // own wallet must be paid
+                || (totalAmount-transferAmount) > foo.get(payTransfers).getValue()) {
+            result = false;
+        } else {
+            for (TransferPair pa : transfers) { // all transfers must be paid as well
+                if ( ! (foo.keySet().contains(pa.address))
+                        || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
+                    result = false;
+                    break;
+                }
             }
         }
 
@@ -436,7 +459,7 @@ public class BitcoinInvoice {
         if (foo.keySet().contains(payDirect)) {
             long value = foo.get(payDirect).getValue();
             if (totalAmount <= value) { // transaction fulfills direct payment
-                logger.info("Received direct payment for invoice " + invoice.getInvoiceId().toString()
+                logger.info("Received direct payment for invoice " + invoiceId.toString()
                         + " to " + payDirect
                         + " with " + foo.get(payDirect).toFriendlyString());
                 payingTx = tx;
@@ -446,7 +469,7 @@ public class BitcoinInvoice {
 
         } else if (foo.keySet().contains(payTransfers)) {
             if (doesTxFulfillTransferPayment(foo)) {
-                logger.info("Received transfer payment for invoice " + invoice.getInvoiceId().toString()
+                logger.info("Received transfer payment for invoice " + invoiceId.toString()
                         + " to " + payTransfers);
                 payingTx = tx;
                 transferTx = tx;

@@ -109,7 +109,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            Invoice invoice = bc.getBitcoinInvoiceById(invoiceId).invoice;
+            Invoice invoice = bc.getBitcoinInvoiceById(invoiceId).getInvoice();
             return Response.ok().entity(invoice).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID

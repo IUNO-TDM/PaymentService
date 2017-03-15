@@ -156,6 +156,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
+        inv.invoiceId(invoiceId);
         BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         couponWallet.addCoinsReceivedEventListener(this);
@@ -281,6 +282,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
-        sendInvoiceStateChangeToCallbackClients(invoice.invoice,state);
+        sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
     }
 }

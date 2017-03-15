@@ -41,7 +41,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                             socket.join((String) args[0]);
                             try{
                                 BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String)args[0]));
-                                String jsonString = buildJsonString(bcInvoice.invoice, bcInvoice.getState());
+                                String jsonString = buildJsonString(bcInvoice.getInvoice(), bcInvoice.getState());
                                 socket.emit("StateChange", jsonString);
                             }catch (NullPointerException e){
                                 logger.error("The requested Invoice does not exists. Cannot send any Stateupdate at " +
