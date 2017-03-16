@@ -31,9 +31,7 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.*;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -57,6 +55,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private PeerGroup peerGroup = null;
     private Logger logger;
     private DateTime lastCleanup = DateTime.now();
+    private DeterministicSeed randomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
@@ -72,6 +71,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         BriefLogFormatter.initWithSilentBitcoinJ();
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.toLevel("info"));
+        KeyChainGroup group = new KeyChainGroup(params); // TODO write a more efficient way to initialize randomSeed
+        group.createAndActivateNewHDChain();
+        randomSeed = group.getActiveKeyChain().getSeed();
     }
 
     public static synchronized Bitcoin getInstance() {
@@ -157,7 +159,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         couponWallet.addCoinsReceivedEventListener(this);
         peerGroup.addWallet(couponWallet);
