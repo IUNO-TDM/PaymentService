@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -76,9 +77,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         Context.enableStrictMode();
         context = new Context(params);
 
-        KeyChainGroup group = new KeyChainGroup(params); // TODO write a more efficient way to initialize randomSeed
-        group.createAndActivateNewHDChain();
-        randomSeed = group.getActiveKeyChain().getSeed();
+        randomSeed = new DeterministicSeed(new SecureRandom(), 128, "", Utils.currentTimeSeconds());
     }
 
     public static synchronized Bitcoin getInstance() {
