@@ -51,10 +51,10 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
 
         } catch (IOException e) {
             e.printStackTrace();
+            System.out.println(e.getMessage());
             err.setMessage("could not get coupon value from remote host for " + invoiceId);
             return Response.status(503).entity(err).build();
         }
-        // TODO catch more exceptions: 503 balance of coupon could not be retrieved
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
