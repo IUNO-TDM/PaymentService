@@ -46,7 +46,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 
 public class BitcoinInvoice {
-    private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
+    private final NetworkParameters params = Context.get().getParams();
     private long totalAmount = 0;
     private long transferAmount = 0;
     private UUID invoiceId;
@@ -58,7 +58,6 @@ public class BitcoinInvoice {
 
     private KeyChainGroup group;
     private Wallet couponWallet;
-    //    final Wallet couponWallet = Wallet.fromWatchingKeyB58();
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
 

@@ -65,12 +65,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
     private static Bitcoin instance;
+    private Context context;
 
     private Bitcoin() {
         logger = LoggerFactory.getLogger(Bitcoin.class);
         BriefLogFormatter.initWithSilentBitcoinJ();
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.toLevel("info"));
+
+        Context.enableStrictMode();
+        context = new Context(params);
+
         KeyChainGroup group = new KeyChainGroup(params); // TODO write a more efficient way to initialize randomSeed
         group.createAndActivateNewHDChain();
         randomSeed = group.getActiveKeyChain().getSeed();
@@ -79,6 +84,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public static synchronized Bitcoin getInstance() {
         if (Bitcoin.instance == null) {
             Bitcoin.instance = new Bitcoin();
+        } else {
+            Context.propagate(instance.context);
         }
         return Bitcoin.instance;
     }
