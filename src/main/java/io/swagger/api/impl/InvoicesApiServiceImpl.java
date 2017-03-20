@@ -29,13 +29,12 @@ import javax.validation.constraints.*;
 import iuno.tdm.paymentservice.Bitcoin;
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
-    private final Bitcoin bc = Bitcoin.getInstance();
 
     @Override
     public Response addCouponToInvoice(UUID invoiceId, String coupon, SecurityContext securityContext) throws NotFoundException {
         Error err = new Error();
         try {
-            AddressValuePair avp = bc.addCoupon(invoiceId, coupon);
+            AddressValuePair avp = Bitcoin.getInstance().addCoupon(invoiceId, coupon);
             return Response.ok().entity(avp).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -52,13 +51,14 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
 
         } catch (IOException e) {
             e.printStackTrace();
+            System.out.println(e.getMessage());
             err.setMessage("could not get coupon value from remote host for " + invoiceId);
             return Response.status(503).entity(err).build();
         }
-        // TODO catch more exceptions: 503 balance of coupon could not be retrieved
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
+        final Bitcoin bc = Bitcoin.getInstance();
         // send service unavailable (503) if bitcoin peergroup is not connected
         if (false == bc.isRunning()) {
             Error err = new Error();
@@ -85,7 +85,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response deleteInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            bc.deleteInvoiceById(invoiceId);
+            Bitcoin.getInstance().deleteInvoiceById(invoiceId);
             return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -97,7 +97,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceBip21(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            String bip21 = bc.getInvoiceBip21(invoiceId);
+            String bip21 = Bitcoin.getInstance().getInvoiceBip21(invoiceId);
             return Response.ok().entity(bip21).type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -109,7 +109,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            Invoice invoice = bc.getBitcoinInvoiceById(invoiceId).getInvoice();
+            Invoice invoice = Bitcoin.getInstance().getBitcoinInvoiceById(invoiceId).getInvoice();
             return Response.ok().entity(invoice).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -131,7 +131,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            State state = bc.getInvoiceState(invoiceId);
+            State state = Bitcoin.getInstance().getInvoiceState(invoiceId);
             return Response.ok().entity(state).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
@@ -143,7 +143,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     @Override
     public Response getInvoiceTransfers(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         try {
-            List<AddressValuePair> transfers = bc.getInvoiceTransfers(invoiceId);
+            List<AddressValuePair> transfers = Bitcoin.getInstance().getInvoiceTransfers(invoiceId);
             return Response.ok().entity(transfers).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
