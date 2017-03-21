@@ -99,8 +99,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         try {
             wallet = Wallet.loadFromFile(walletFile);
         } catch (UnreadableWalletException e) {
-            logger.warn("creating new wallet");
-            wallet = new Wallet(context);
+            logger.warn("wallet could not be read");
+//            wallet = new Wallet(context);
+            return; // this is there to notice when an existing wallet can not be read any more
         }
 
         // wallets configuration
