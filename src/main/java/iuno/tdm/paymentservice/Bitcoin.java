@@ -91,21 +91,42 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     }
 
     public void start() { // TODO: this method must be called once only!
-        String homeDir = System.getProperty("user.home");
-        File chainFile = new File(homeDir, PREFIX + ".spvchain");
-        File walletFile = new File(homeDir, PREFIX + ".wallet");
+        String workDir = System.getProperty("user.home") + "/." + PREFIX;
+        new File(workDir).mkdirs();
 
-        // create new wallet system
+        File chainFile = new File(workDir, PREFIX + ".spvchain");
+        File walletFile = new File(workDir, PREFIX + ".wallet");
+        File backupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
+//        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middla of april 2017 for a smooth migration from homedir to ~/.PaymentService
+
+        // initiate wallet system
         try {
             wallet = Wallet.loadFromFile(walletFile);
-        } catch (UnreadableWalletException e) {
-            logger.warn("wallet could not be read");
-//            wallet = new Wallet(context);
-            return; // this is there to notice when an existing wallet can not be read any more
+
+        } catch (UnreadableWalletException e) { // try to read backup wallet and reset blockchain
+            try {
+                logger.warn(String.format("wallet could not be read: %s; trying to load backup wallet", e.getMessage()));
+                chainFile.delete();
+                wallet = Wallet.loadFromFile(backupFile);
+
+            } catch (UnreadableWalletException e2) {
+                logger.warn(String.format("backup wallet could not be read: %s; creating new wallet", e2.getMessage()));
+                wallet = new Wallet(context);
+            }
+        }
+
+        // eventually create backup file
+        try {
+            if (!backupFile.exists()) wallet.saveToFile(backupFile);
+        } catch (IOException e1) {
+            logger.error(String.format("creating backup failed: %s", e1.getMessage()));
+            e1.printStackTrace();
+            return;
         }
 
         // wallets configuration
-        if (!chainFile.exists()) wallet.reset(); // reset wallet if chainfile does not exist
+        if (!chainFile.exists())
+            wallet.reset(); // reset wallet if chainfile does not exist
         // wallet.allowSpendingUnconfirmedTransactions();
         wallet.addCoinsReceivedEventListener(this);
         logStatus();
