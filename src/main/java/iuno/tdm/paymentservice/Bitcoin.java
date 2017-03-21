@@ -99,28 +99,37 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         File backupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
 //        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middla of april 2017 for a smooth migration from homedir to ~/.PaymentService
 
-        // initiate wallet system
+        // try to load regular wallet or if not existant load backup wallet or create new wallet
+        // fail if an existing wallet file can not be read and admin needs to examine the wallets
+        String filename = "n/a";
         try {
-            wallet = Wallet.loadFromFile(walletFile);
+            if (walletFile.exists()) {
+                filename = walletFile.toString();
+                wallet = Wallet.loadFromFile(walletFile);
 
-        } catch (UnreadableWalletException e) { // try to read backup wallet and reset blockchain
-            try {
-                logger.warn(String.format("wallet could not be read: %s; trying to load backup wallet", e.getMessage()));
+            } else {
+                if (backupFile.exists()) {
+                    filename = backupFile.toString();
+                    wallet = Wallet.loadFromFile(backupFile);
+
+                } else {
+                    wallet = new Wallet(context);
+                }
                 chainFile.delete();
-                wallet = Wallet.loadFromFile(backupFile);
-
-            } catch (UnreadableWalletException e2) {
-                logger.warn(String.format("backup wallet could not be read: %s; creating new wallet", e2.getMessage()));
-                wallet = new Wallet(context);
             }
+
+        } catch (UnreadableWalletException e) {
+            logger.warn(String.format("wallet file %s could not be read: %s", filename, e.getMessage()));
+            e.printStackTrace();
+            return;
         }
 
         // eventually create backup file
         try {
             if (!backupFile.exists()) wallet.saveToFile(backupFile);
-        } catch (IOException e1) {
-            logger.error(String.format("creating backup failed: %s", e1.getMessage()));
-            e1.printStackTrace();
+        } catch (IOException e) {
+            logger.error(String.format("creating backup wallet failed: %s", e.getMessage()));
+            e.printStackTrace();
             return;
         }
 
@@ -135,6 +144,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         try {
             wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null).saveNow();
         } catch (IOException e) {
+            logger.error(String.format("creating wallet file failed: %s", e.getMessage()));
             e.printStackTrace();
             return;
         }
