@@ -3,7 +3,7 @@ package io.swagger.api.factories;
 import io.swagger.api.InvoicesApiService;
 import io.swagger.api.impl.InvoicesApiServiceImpl;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-14T13:03:20.565Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
 public class InvoicesApiServiceFactory {
     private final static InvoicesApiService service = new InvoicesApiServiceImpl();
 

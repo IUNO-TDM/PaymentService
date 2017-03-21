@@ -4,6 +4,7 @@ import io.swagger.api.*;
 import io.swagger.model.*;
 
 import io.swagger.model.AddressValuePair;
+import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
@@ -31,10 +32,10 @@ import iuno.tdm.paymentservice.Bitcoin;
 public class InvoicesApiServiceImpl extends InvoicesApiService {
 
     @Override
-    public Response addCouponToInvoice(UUID invoiceId, String coupon, SecurityContext securityContext) throws NotFoundException {
+    public Response addCouponToInvoice(UUID invoiceId, Coupon coupon, SecurityContext securityContext) throws NotFoundException {
         Error err = new Error();
         try {
-            AddressValuePair avp = Bitcoin.getInstance().addCoupon(invoiceId, coupon);
+            AddressValuePair avp = Bitcoin.getInstance().addCoupon(invoiceId, coupon.getCoupon());
             return Response.ok().entity(avp).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
