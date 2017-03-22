@@ -131,7 +131,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             logger.error(String.format("creating backup wallet failed: %s", e.getMessage()));
             e.printStackTrace();
             return;
-        }
+       }
 
         // wallets configuration
         if (!chainFile.exists())
