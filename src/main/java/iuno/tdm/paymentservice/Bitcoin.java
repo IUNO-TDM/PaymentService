@@ -154,7 +154,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         }
 
         // initialize blockchain file
-        BlockChain blockChain = null;
+        BlockChain blockChain;
         try {
             blockChain = new BlockChain(context, wallet, new SPVBlockStore(context.getParams(), chainFile));
         } catch (BlockStoreException e) {
