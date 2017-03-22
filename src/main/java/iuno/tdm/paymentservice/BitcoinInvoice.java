@@ -111,9 +111,13 @@ public class BitcoinInvoice {
     }
 
     Vector<Coupon> coupons = new Vector<>();
+    Vector<String> keys = new Vector<>();
 
     AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
         if (isExpired()) throw new IllegalStateException("invoice is already expired");
+
+        if (keys.contains(key)) throw new IllegalStateException("coupon was already added");
+        keys.add(key);
 
         Coupon coupon = new Coupon(DumpedPrivateKey.fromBase58(params, key).getKey());
         final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
