@@ -26,6 +26,7 @@ import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
@@ -78,7 +79,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         context = new Context(params);
         Context.propagate(context);
 
-        randomSeed = new DeterministicSeed(new SecureRandom(), 128, "", Utils.currentTimeSeconds());
+        byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
+        List<String> mnemonic = new ArrayList<>(0);
+        randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
+        // randomSeed = new DeterministicSeed(new SecureRandom(), 128, "", Utils.currentTimeSeconds());
     }
 
     public static synchronized Bitcoin getInstance() {
