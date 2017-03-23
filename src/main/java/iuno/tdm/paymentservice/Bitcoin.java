@@ -44,10 +44,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -246,6 +243,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         peerGroup.removeWallet(couponWallet);
         couponWallet.removeCoinsReceivedEventListener(this);
         invoiceHashMap.remove(id);
+    }
+
+    public Set<UUID> getInvoiceIds() {
+        return invoiceHashMap.keySet();
     }
 
     /**

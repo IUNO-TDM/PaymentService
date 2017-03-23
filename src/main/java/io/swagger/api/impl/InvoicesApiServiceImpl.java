@@ -12,6 +12,7 @@ import io.swagger.model.State;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Set;
 import java.util.UUID;
 
 import java.util.List;
@@ -155,7 +156,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response getInvoices(SecurityContext securityContext) throws NotFoundException {
-        // do some magic!
-        return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
+        Set<UUID> invoiceIds = Bitcoin.getInstance().getInvoiceIds();
+        return Response.ok().entity(invoiceIds).build();
     }
 }
