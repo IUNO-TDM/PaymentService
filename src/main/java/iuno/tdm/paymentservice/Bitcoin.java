@@ -49,6 +49,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoiceCallbackInterface {
@@ -219,7 +220,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         AddressValuePair avp = invoice.addCoupon(key);
         Transaction tx = invoice.tryPayWithCoupons();
         if (null != tx)
-            peerGroup.broadcastTransaction(tx).broadcast();
+            syncBroadcastTransaction(tx);
         return avp;
     }
 
@@ -264,6 +265,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         lastCleanup = DateTime.now();
     }
 
+    synchronized void syncBroadcastTransaction(Transaction tx) {
+        try {
+            peerGroup.broadcastTransaction(tx).broadcast().get();
+        } catch (InterruptedException | ExecutionException e) {
+            e.printStackTrace(); // fail
+        }
+
+    }
+
     @Override
     public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
         logger.info("Received tx with " + tx.getValueSentToMe(wallet).toFriendlyString() + ": " + tx);
@@ -287,7 +297,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
             Transaction txCoupon = bcInvoice.tryPayWithCoupons();
             if (null != txCoupon) {
-                peerGroup.broadcastTransaction(txCoupon).broadcast();
+                syncBroadcastTransaction(tx);
                 continue;
             }
 
@@ -296,7 +306,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                 try {
                     wallet.completeTx(sr);
                     wallet.commitTx(sr.tx);
-                    peerGroup.broadcastTransaction(sr.tx).broadcast();
+                    syncBroadcastTransaction(sr.tx);
                 } catch (InsufficientMoneyException e) {
                     e.printStackTrace();
                 }

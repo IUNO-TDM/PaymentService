@@ -23,7 +23,6 @@ import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
 import org.json.JSONArray;
