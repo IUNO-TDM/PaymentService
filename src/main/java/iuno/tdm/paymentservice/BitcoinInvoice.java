@@ -31,6 +31,7 @@ import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -54,7 +55,8 @@ public class BitcoinInvoice {
     private Date expiration;
     private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     private Address payTransfers;
-    private Logger logger;
+    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
+
 
     private KeyChainGroup group;
     private Wallet couponWallet;
@@ -183,11 +185,13 @@ public class BitcoinInvoice {
         URL url;
         String response = "";
         url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
-        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+        HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
             response += line;
         }
+        con.disconnect();
         return response;
     }
 
@@ -271,7 +275,6 @@ public class BitcoinInvoice {
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
     BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
-        logger = LoggerFactory.getLogger(Bitcoin.class);
         bitcoinInvoiceCallbackInterface = callbackInterface;
         // check sanity of invoice
         totalAmount = inv.getTotalAmount();

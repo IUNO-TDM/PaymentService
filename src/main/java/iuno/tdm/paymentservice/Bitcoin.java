@@ -32,7 +32,10 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.*;
+import org.bitcoinj.wallet.DeterministicSeed;
+import org.bitcoinj.wallet.SendRequest;
+import org.bitcoinj.wallet.UnreadableWalletException;
+import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -41,7 +44,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -54,7 +56,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     private Wallet wallet = null;
     private PeerGroup peerGroup = null;
-    private Logger logger;
+    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
     private DateTime lastCleanup = DateTime.now();
     private DeterministicSeed randomSeed;
 
@@ -69,7 +71,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private Context context;
 
     private Bitcoin() {
-        logger = LoggerFactory.getLogger(Bitcoin.class);
         BriefLogFormatter.initWithSilentBitcoinJ();
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.toLevel("info"));
@@ -82,7 +83,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
         List<String> mnemonic = new ArrayList<>(0);
         randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
-        // randomSeed = new DeterministicSeed(new SecureRandom(), 128, "", Utils.currentTimeSeconds());
     }
 
     public static synchronized Bitcoin getInstance() {
