@@ -40,6 +40,7 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     public Response addCouponToInvoice(UUID invoiceId, Coupon coupon, SecurityContext securityContext) throws NotFoundException {
         Response resp;
         Error err = new Error();
+        err.setMessage("success");
         try {
             AddressValuePair avp = Bitcoin.getInstance().addCoupon(invoiceId, coupon.getCoupon());
             resp = Response.ok().entity(avp).build();
@@ -67,29 +68,34 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        UUID invoiceId = UUID.fromString("00000000-0000-0000-0000-000000000000");
         final Bitcoin bc = Bitcoin.getInstance();
         // send service unavailable (503) if bitcoin peergroup is not connected
         if (false == bc.isRunning()) {
-            Error err = new Error();
             err.setMessage("Peergroup is unavailable.");
-            return Response.status(503).entity(err).build();
+            resp = Response.status(503).entity(err).build();
+
+        } else {
+            URI createdUri = null;
+            try {
+                invoiceId = bc.addInvoice(invoice);
+                createdUri = new URI("http://localhost:8080/v1/invoices/" + invoiceId.toString() + "/");
+                resp = Response.created(createdUri).entity(invoice).build();
+
+            } catch (IllegalArgumentException e) { // error in invoice
+                err.setMessage(e.getMessage());
+                resp = Response.status(400).entity(err).build();
+
+            } catch (URISyntaxException e) { // should never happen
+                e.printStackTrace();
+                resp = Response.serverError().build();
+            }
         }
-
-        URI createdUri = null;
-        try {
-            UUID invoiceID = bc.addInvoice(invoice);
-            createdUri = new URI("http://localhost:8080/v1/invoices/" + invoiceID.toString() + "/");
-            return Response.created(createdUri).entity(invoice).build();
-
-        } catch (IllegalArgumentException e) { // error in invoice
-            Error err = new Error();
-            err.setMessage(e.getMessage());
-            return Response.status(400).entity(err).build();
-
-        } catch (URISyntaxException e) { // should never happen
-            e.printStackTrace();
-            return Response.serverError().build();
-        }
+        logger.info(String.format("%s (%03d) addInvoice: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response deleteInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
