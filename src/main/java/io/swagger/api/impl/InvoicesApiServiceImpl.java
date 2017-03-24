@@ -29,34 +29,41 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
 import iuno.tdm.paymentservice.Bitcoin;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
+    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 
     @Override
     public Response addCouponToInvoice(UUID invoiceId, Coupon coupon, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
         Error err = new Error();
         try {
             AddressValuePair avp = Bitcoin.getInstance().addCoupon(invoiceId, coupon.getCoupon());
-            return Response.ok().entity(avp).build();
+            resp = Response.ok().entity(avp).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp =  Response.status(404).entity(err).build();
 
         } catch (IllegalStateException e) { // invoice finished or expired
             err.setMessage(String.format("%s %s", e.getMessage(), invoiceId));
-            return Response.status(409).entity(err).build();
+            resp = Response.status(409).entity(err).build();
 
         } catch (AddressFormatException e) { // unparseable coupon code
             err.setMessage("the passed coupon code is invalid");
-            return Response.status(422).entity(err).build();
+            resp = Response.status(422).entity(err).build();
 
         } catch (IOException e) {
             e.printStackTrace();
             System.out.println(e.getMessage());
             err.setMessage("could not get coupon value from remote host for " + invoiceId);
-            return Response.status(503).entity(err).build();
+            resp = Response.status(503).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) addCouponToInvoice: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response addInvoice(Invoice invoice, SecurityContext securityContext) throws NotFoundException {
