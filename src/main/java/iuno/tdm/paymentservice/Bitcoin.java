@@ -99,7 +99,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         File chainFile = new File(workDir, PREFIX + ".spvchain");
         File walletFile = new File(workDir, PREFIX + ".wallet");
         File backupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
-//        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middla of april 2017 for a smooth migration from homedir to ~/.PaymentService
+//        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middle of april 2017 for a smooth migration from homedir to ~/.PaymentService
 
         // try to load regular wallet or if not existant load backup wallet or create new wallet
         // fail if an existing wallet file can not be read and admin needs to examine the wallets
@@ -267,12 +267,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     }
 
     synchronized void syncBroadcastTransaction(Transaction tx) {
-        try {
-            peerGroup.broadcastTransaction(tx).broadcast().get();
-        } catch (InterruptedException | ExecutionException e) {
-            e.printStackTrace(); // fail
-        }
-
+        peerGroup.broadcastTransaction(tx).broadcast();
     }
 
     @Override
@@ -298,7 +293,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
             Transaction txCoupon = bcInvoice.tryPayWithCoupons();
             if (null != txCoupon) {
-                syncBroadcastTransaction(tx);
+                // syncBroadcastTransaction(tx);
                 continue;
             }
 
@@ -306,7 +301,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             if (null != sr) {
                 try {
                     wallet.completeTx(sr);
-                    wallet.commitTx(sr.tx);
+                    wallet.maybeCommitTx(sr.tx);
                     syncBroadcastTransaction(sr.tx);
                 } catch (InsufficientMoneyException e) {
                     e.printStackTrace();
