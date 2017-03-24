@@ -99,39 +99,51 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response deleteInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
         try {
             Bitcoin.getInstance().deleteInvoiceById(invoiceId);
-            return Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
+            resp = Response.ok().entity("invoice deleted").type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
-            Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp = Response.status(404).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) deleteInvoiceById: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response getInvoiceBip21(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
         try {
             String bip21 = Bitcoin.getInstance().getInvoiceBip21(invoiceId);
-            return Response.ok().entity(bip21).type(MediaType.TEXT_PLAIN_TYPE).build();
+            resp = Response.ok().entity(bip21).type(MediaType.TEXT_PLAIN_TYPE).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
-            Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp = Response.status(404).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) getInvoiceBip21: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response getInvoiceById(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
         try {
             Invoice invoice = Bitcoin.getInstance().getBitcoinInvoiceById(invoiceId).getInvoice();
-            return Response.ok().entity(invoice).build();
+            resp = Response.ok().entity(invoice).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
-            Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp = Response.status(404).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) getInvoiceById: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response getInvoiceCouponBalance(UUID invoiceId, String couponAddress, SecurityContext securityContext) throws NotFoundException {
@@ -145,31 +157,40 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
     }
     @Override
     public Response getInvoiceState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
         try {
             State state = Bitcoin.getInstance().getInvoiceState(invoiceId);
-            return Response.ok().entity(state).build();
+            resp = Response.ok().entity(state).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
-            Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp = Response.status(404).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) getInvoiceState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response getInvoiceTransfers(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
         try {
             List<AddressValuePair> transfers = Bitcoin.getInstance().getInvoiceTransfers(invoiceId);
-            return Response.ok().entity(transfers).build();
+            resp = Response.ok().entity(transfers).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
-            Error err = new Error();
             err.setMessage("no invoice found for id " + invoiceId);
-            return Response.status(404).entity(err).build();
+            resp = Response.status(404).entity(err).build();
         }
+        logger.info(String.format("%s (%03d) getInvoiceTransfers: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
     @Override
     public Response getInvoices(SecurityContext securityContext) throws NotFoundException {
         Set<UUID> invoiceIds = Bitcoin.getInstance().getInvoiceIds();
+        logger.info(String.format("00000000-0000-0000-0000-000000000000 (200) getInvoices"));
         return Response.ok().entity(invoiceIds).build();
     }
 }
