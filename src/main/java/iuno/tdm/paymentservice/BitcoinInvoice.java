@@ -52,10 +52,17 @@ public class BitcoinInvoice {
     private UUID invoiceId;
     private String referenceId;
     private Date expiration;
-    private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
-    private Address payTransfers;
+    private Address receiveAddress; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
+    private Address transferAddress;
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 
+    public Address getReceiveAddress() {
+        return receiveAddress;
+    }
+
+    public Address getTransferAddress() {
+        return transferAddress;
+    }
 
     private KeyChainGroup group;
     private Wallet couponWallet;
@@ -159,10 +166,10 @@ public class BitcoinInvoice {
             SendRequest sr = SendRequest.forTx(tx);
             sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
             if (balance > (totalAmount + 2*Transaction.MIN_NONDUST_OUTPUT.getValue())) {
-                sr.tx.addOutput(Coin.valueOf(totalAmount-transferAmount), payTransfers);
+                sr.tx.addOutput(Coin.valueOf(totalAmount-transferAmount), transferAddress);
                 sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
             } else {
-                sr.changeAddress = payTransfers;
+                sr.changeAddress = transferAddress;
             }
 
             try {
@@ -299,8 +306,8 @@ public class BitcoinInvoice {
 
         invoiceId = id;
         referenceId = inv.getReferenceId();
-        payDirect = addr;
-        payTransfers = addr2;
+        receiveAddress = addr;
+        transferAddress = addr2;
 
         Stopwatch watch = Stopwatch.createStarted();
         group = new KeyChainGroup(params, seed);
@@ -336,7 +343,7 @@ public class BitcoinInvoice {
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(payDirect, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
+        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
     }
 
     /**
@@ -350,7 +357,7 @@ public class BitcoinInvoice {
             avpList.add(pa.getAddressValuePair());
 
         long difference = totalAmount - transferAmount;
-        avpList.add(new AddressValuePair().address(payTransfers.toBase58()).coin(difference));
+        avpList.add(new AddressValuePair().address(transferAddress.toBase58()).coin(difference));
         return avpList;
     }
 
@@ -393,7 +400,7 @@ public class BitcoinInvoice {
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
         for (TransactionOutput tout : incomingTx.getOutputs()) {
-            if (payDirect.equals(tout.getAddressFromP2PKHScript(params))
+            if (receiveAddress.equals(tout.getAddressFromP2PKHScript(params))
                     && tout.isAvailableForSpending()) {
                 int index = tout.getIndex();
                 TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, incomingTx);
@@ -444,8 +451,8 @@ public class BitcoinInvoice {
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
         boolean result = true;
 
-        if (( ! foo.keySet().contains(payTransfers)) // own wallet must be paid
-                || (totalAmount-transferAmount) > foo.get(payTransfers).getValue()) {
+        if (( ! foo.keySet().contains(transferAddress)) // own wallet must be paid
+                || (totalAmount-transferAmount) > foo.get(transferAddress).getValue()) {
             result = false;
         } else {
             for (TransferPair pa : transfers) { // all transfers must be paid as well
@@ -467,21 +474,21 @@ public class BitcoinInvoice {
      */
     public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> foo) {
 
-        if (foo.keySet().contains(payDirect)) {
-            long value = foo.get(payDirect).getValue();
+        if (foo.keySet().contains(receiveAddress)) {
+            long value = foo.get(receiveAddress).getValue();
             if (totalAmount <= value) { // transaction fulfills direct payment
                 logger.info("Received direct payment for invoice " + invoiceId.toString()
-                        + " to " + payDirect
-                        + " with " + foo.get(payDirect).toFriendlyString());
+                        + " to " + receiveAddress
+                        + " with " + foo.get(receiveAddress).toFriendlyString());
                 incomingTx = tx;
                 incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
                 payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(),null);
             }
 
-        } else if (foo.keySet().contains(payTransfers)) {
+        } else if (foo.keySet().contains(transferAddress)) {
             if (doesTxFulfillTransferPayment(foo)) {
                 logger.info("Received transfer payment for invoice " + invoiceId.toString()
-                        + " to " + payTransfers);
+                        + " to " + transferAddress);
                 incomingTx = tx;
                 transferTx = tx;
                 incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
