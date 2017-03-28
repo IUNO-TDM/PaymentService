@@ -54,7 +54,7 @@ public class BitcoinInvoice {
     private Date expiration;
     private Address receiveAddress; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     private Address transferAddress;
-    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
+    private static final Logger logger = LoggerFactory.getLogger(BitcoinInvoice.class);
 
     public Address getReceiveAddress() {
         return receiveAddress;
@@ -130,7 +130,7 @@ public class BitcoinInvoice {
         Coupon coupon = new Coupon(DumpedPrivateKey.fromBase58(params, key).getKey());
         final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
         final String response = getUtxoString(pubKeyHash);
-        logger.info(response);
+        logger.debug(response);
         coupon.value = getSatoshisFromUtxoString(response);
         coupons.add(coupon);
 
@@ -155,7 +155,7 @@ public class BitcoinInvoice {
         Transaction result = null;
         long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
         if (null != incomingTx) {
-            logger.info("Transaction has already been paid");
+            logger.info(String.format("Transaction %s has already been paid.", invoiceId.toString()));
 
         } else if (balance < totalAmount) {
             logger.info("Too few coupons in wallet: " + couponWallet.getBalance().toFriendlyString());
@@ -213,8 +213,6 @@ public class BitcoinInvoice {
 
     private Map<Sha256Hash, Transaction> getTransactionsForUtxoString(String str) {
         final JSONArray json = new JSONArray(str);
-
-        logger.info("Array length: " + json.length());
 
         final Map<Sha256Hash, Transaction> transactions = new HashMap<>(json.length());
 
@@ -319,6 +317,10 @@ public class BitcoinInvoice {
         couponWallet.allowSpendingUnconfirmedTransactions();
     }
 
+    /**
+     * Returns the invoice data.
+     * @return invoice data
+     */
     public Invoice getInvoice() {
         Invoice result = new Invoice()
                 .totalAmount(totalAmount)
@@ -469,30 +471,33 @@ public class BitcoinInvoice {
 
     /**
      * Checks all outputs of a transaction for payments to this invoice.
-     * @deprecated this is an inefficient way that only works for verifying just a few payments per second
      * @param tx new transaction with outputs to be checked
      */
-    public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> foo) {
+    public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
 
-        if (foo.keySet().contains(receiveAddress)) {
-            long value = foo.get(receiveAddress).getValue();
+        if (addressCoinHashMap.keySet().contains(receiveAddress)) {
+            long value = addressCoinHashMap.get(receiveAddress).getValue();
             if (totalAmount <= value) { // transaction fulfills direct payment
                 logger.info("Received direct payment for invoice " + invoiceId.toString()
                         + " to " + receiveAddress
-                        + " with " + foo.get(receiveAddress).toFriendlyString());
+                        + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
                 incomingTx = tx;
                 incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
                 payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(),null);
             }
 
-        } else if (foo.keySet().contains(transferAddress)) {
-            if (doesTxFulfillTransferPayment(foo)) {
+        } else if (addressCoinHashMap.keySet().contains(transferAddress)) {
+            if (doesTxFulfillTransferPayment(addressCoinHashMap)) {
                 logger.info("Received transfer payment for invoice " + invoiceId.toString()
                         + " to " + transferAddress);
                 incomingTx = tx;
                 transferTx = tx;
                 incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             }
+
+        } else {
+            logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
+                    invoiceId, tx.getHash().toString()));
         }
     }
 }
