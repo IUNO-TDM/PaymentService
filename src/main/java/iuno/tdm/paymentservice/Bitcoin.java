@@ -59,6 +59,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private DeterministicSeed randomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
+    private HashMap<Address, BitcoinInvoice> addressHashMap = new HashMap<>();
 
     private static final String PREFIX = "PaymentService";
 
@@ -140,6 +141,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             wallet.reset(); // reset wallet if chainfile does not exist
         // wallet.allowSpendingUnconfirmedTransactions();
         wallet.addCoinsReceivedEventListener(this);
+        wallet.setDescription(this.getClass().getName());
         logStatus();
 
         // auto save wallets at least every five seconds
@@ -205,8 +207,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         couponWallet.addCoinsReceivedEventListener(this);
         peerGroup.addWallet(couponWallet);
 
-        // add invoice to hashMap
+        // add invoice to hashmaps
         invoiceHashMap.put(invoiceId, bcInvoice);
+        addressHashMap.put(bcInvoice.getReceiveAddress(), bcInvoice);
+        addressHashMap.put(bcInvoice.getTransferAddress(), bcInvoice);
         logger.info("Added invoice " + invoiceId.toString() + " to hashmap.");
         logger.info(invoiceId.toString() + " - " + bcInvoice.getBip21URI());
         return invoiceId;
@@ -243,6 +247,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         peerGroup.removeWallet(couponWallet);
         couponWallet.removeCoinsReceivedEventListener(this);
         invoiceHashMap.remove(id);
+        addressHashMap.remove(bcInvoice.getReceiveAddress());
+        addressHashMap.remove(bcInvoice.getTransferAddress());
     }
 
     public Set<UUID> getInvoiceIds() {
@@ -274,22 +280,24 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
         logger.info("Received tx with " + tx.getValueSentToMe(wallet).toFriendlyString() + ": " + tx);
 
-        HashMap<Address, Coin> foo = new HashMap<>();
+        // create a hashmap with addresses and the sum of all coins send to each one
+        HashMap<Address, Coin> addressCoinHashMap = new HashMap<>();
         for (TransactionOutput txout : tx.getOutputs()) {
             Address addr = txout.getAddressFromP2PKHScript(context.getParams());
             Coin value = txout.getValue();
             if (null != addr) {
-                if (! foo.containsKey(addr)) {
-                    foo.put(addr, value);
+                if (! addressCoinHashMap.containsKey(addr)) {
+                    addressCoinHashMap.put(addr, value);
 
                 } else {
-                    foo.put(addr, foo.get(addr).add(value));
+                    addressCoinHashMap.put(addr, addressCoinHashMap.get(addr).add(value));
                 }
             }
         }
 
+
         for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
-            bcInvoice.sortOutputsToAddresses(tx, foo);
+            bcInvoice.sortOutputsToAddresses(tx, addressCoinHashMap);
 
             Transaction txCoupon = bcInvoice.tryPayWithCoupons();
             if (null != txCoupon) {
