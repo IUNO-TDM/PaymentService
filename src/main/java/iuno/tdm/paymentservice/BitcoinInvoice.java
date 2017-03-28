@@ -65,7 +65,7 @@ public class BitcoinInvoice {
     /**
      * This member will be set to the transaction that paid this invoice.
      */
-    private Transaction payingTx;
+    private Transaction incomingTx;
     /**
      * This member will be set to the transaction that paid the transfers of this invoice.
      */
@@ -147,7 +147,7 @@ public class BitcoinInvoice {
     Transaction tryPayWithCoupons() {
         Transaction result = null;
         long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
-        if (null != payingTx) {
+        if (null != incomingTx) {
             logger.info("Transaction has already been paid");
 
         } else if (balance < totalAmount) {
@@ -169,9 +169,9 @@ public class BitcoinInvoice {
                 couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
                 couponWallet.commitTx(sr.tx);
                 result = sr.tx;
-                payingTx = sr.tx;
+                incomingTx = sr.tx;
                 transferTx = sr.tx;
-                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -356,7 +356,7 @@ public class BitcoinInvoice {
 
     State getState() {
         TransactionConfidence confidence = null;
-        if (null != payingTx) confidence = payingTx.getConfidence();
+        if (null != incomingTx) confidence = incomingTx.getConfidence();
         return mapConfidenceToState(confidence);
     }
 
@@ -392,14 +392,14 @@ public class BitcoinInvoice {
 
     Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
-        for (TransactionOutput tout : payingTx.getOutputs()) {
+        for (TransactionOutput tout : incomingTx.getOutputs()) {
             if (payDirect.equals(tout.getAddressFromP2PKHScript(params))
                     && tout.isAvailableForSpending()) {
                 int index = tout.getIndex();
-                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, payingTx);
+                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, incomingTx);
                 byte[] script = tout.getScriptBytes();
                 TransactionInput txin; // TODO check if script needs to contain something
-                txin = new TransactionInput(params, payingTx, script, txOutpoint);
+                txin = new TransactionInput(params, incomingTx, script, txOutpoint);
                 txin.clearScriptBytes();
                 inputs.add(txin);
             }
@@ -408,7 +408,7 @@ public class BitcoinInvoice {
     }
 
     SendRequest tryFinishInvoice() {
-        if (null == payingTx) {
+        if (null == incomingTx) {
             logger.info("Invoice " + invoiceId.toString() + " has not yet been paid.");
             return null;
         }
@@ -473,18 +473,18 @@ public class BitcoinInvoice {
                 logger.info("Received direct payment for invoice " + invoiceId.toString()
                         + " to " + payDirect
                         + " with " + foo.get(payDirect).toFriendlyString());
-                payingTx = tx;
-                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
-                payingTransactionConfidenceListener.onConfidenceChanged(payingTx.getConfidence(),null);
+                incomingTx = tx;
+                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+                payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(),null);
             }
 
         } else if (foo.keySet().contains(payTransfers)) {
             if (doesTxFulfillTransferPayment(foo)) {
                 logger.info("Received transfer payment for invoice " + invoiceId.toString()
                         + " to " + payTransfers);
-                payingTx = tx;
+                incomingTx = tx;
                 transferTx = tx;
-                payingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             }
         }
     }
