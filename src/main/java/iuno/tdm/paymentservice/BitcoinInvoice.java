@@ -38,7 +38,7 @@ import java.net.URL;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkState;
-
+import static org.bitcoinj.core.Utils.HEX;
 
 /**
  * Invoices may be paid by either completing a BIP21 URI in one single transaction
@@ -451,9 +451,10 @@ public class BitcoinInvoice {
 
         Transaction tx = new Transaction(params);
 
-        // add inputs from incoming payment
-        for (TransactionInput txin : getInputs())
-            tx.addInput(txin);
+        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
+        if (TransactionConfidence.ConfidenceType.BUILDING == incomingTx.getConfidence().getConfidenceType())
+            for (TransactionInput txin : getInputs())
+                tx.addInput(txin);
 
         addTransfersToTx(tx);
 
@@ -496,6 +497,7 @@ public class BitcoinInvoice {
      * @param tx new transaction with outputs to be checked
      */
     public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
+        logger.debug("transaction script: " + HEX.encode(tx.bitcoinSerialize()));
 
         if (addressCoinHashMap.keySet().contains(receiveAddress)) {
             long value = addressCoinHashMap.get(receiveAddress).getValue();
@@ -519,6 +521,7 @@ public class BitcoinInvoice {
         }
 
         if (null != incomingTx) {
+            incomingTx.getConfidence().removeEventListener(payingTransactionConfidenceListener); // TODO removed just in case it was already added
             incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
         }
     }
