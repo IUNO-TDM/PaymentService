@@ -500,13 +500,11 @@ public class BitcoinInvoice {
                 if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
             }
 
-        } else if (addressCoinHashMap.keySet().contains(transferAddress)) {
-            if (doesTxFulfillTransferPayment(addressCoinHashMap)) {
-                logger.info("Received transfer payment for invoice " + invoiceId.toString()
-                        + " to " + transferAddress);
-                incomingTx = tx;
-                transferTx = tx;
-            }
+        } else if (doesTxFulfillTransferPayment(addressCoinHashMap)) {
+            logger.info("Received transfer payment for invoice " + invoiceId.toString()
+                    + " to " + transferAddress);
+            incomingTx = tx;
+            transferTx = tx;
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
