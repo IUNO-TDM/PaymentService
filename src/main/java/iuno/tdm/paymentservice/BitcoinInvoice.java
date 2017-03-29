@@ -498,8 +498,6 @@ public class BitcoinInvoice {
                         + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
                 incomingTx = tx;
                 if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
-                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
-                payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(),null);
             }
 
         } else if (addressCoinHashMap.keySet().contains(transferAddress)) {
@@ -508,12 +506,16 @@ public class BitcoinInvoice {
                         + " to " + transferAddress);
                 incomingTx = tx;
                 transferTx = tx;
-                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
             }
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
                     invoiceId, tx.getHash().toString()));
+        }
+
+        if (null != incomingTx) {
+            incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+            payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(), null);
         }
     }
 }
