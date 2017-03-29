@@ -520,7 +520,6 @@ public class BitcoinInvoice {
 
         if (null != incomingTx) {
             incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
-            payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(), null);
         }
     }
 }
