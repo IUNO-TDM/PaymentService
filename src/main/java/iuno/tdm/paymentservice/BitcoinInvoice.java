@@ -101,8 +101,15 @@ public class BitcoinInvoice {
     private TransactionConfidence.Listener payingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
         @Override
         public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
-            if(bitcoinInvoiceCallbackInterface != null){
+            if (bitcoinInvoiceCallbackInterface != null){
                 State state = mapConfidenceToState(confidence);
+                logger.info(String.format("%s tx %s changed state to (%s, %d, %d) for change reason %s",
+                        invoiceId,
+                        confidence.getTransactionHash().toString(),
+                        confidence.getConfidenceType().toString(),
+                        confidence.numBroadcastPeers(),
+                        confidence.getDepthInBlocks(),
+                        reason.toString()));
                 bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
             }
         }
