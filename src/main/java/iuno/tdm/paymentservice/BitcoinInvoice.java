@@ -369,19 +369,24 @@ public class BitcoinInvoice {
         return mapConfidenceToState(confidence);
     }
 
-    static public State mapConfidenceToState(TransactionConfidence conf) {
+    /**
+     * This method maps a bitcoin transaction confidence object to an object defined using swagger.
+     * @param confidence a bitcoinj TransactionConfidence object
+     * @return confidence state as swagger object
+     */
+    static public State mapConfidenceToState(TransactionConfidence confidence) {
         State result = new State();
         result.setState(State.StateEnum.UNKNOWN);
         result.setDepthInBlocks(Integer.MIN_VALUE);
-        if (conf != null) {
-            switch (conf.getConfidenceType()) {
+        if (confidence != null) {
+            switch (confidence.getConfidenceType()) {
                 case BUILDING:
                     result.setState(State.StateEnum.BUILDING);
-                    result.setDepthInBlocks(conf.getDepthInBlocks());
+                    result.setDepthInBlocks(confidence.getDepthInBlocks());
                     break;
                 case PENDING:
                     result.setState(State.StateEnum.PENDING);
-                    result.setDepthInBlocks(0);
+                    result.setDepthInBlocks(Integer.MIN_VALUE + confidence.numBroadcastPeers());
                     break;
                 case DEAD:
                     result.setState(State.StateEnum.DEAD);
@@ -399,7 +404,11 @@ public class BitcoinInvoice {
         return result;
     }
 
-    Set<TransactionInput> getInputs() {
+    /**
+     * Get all spendable outputs of the incoming transaction and return them as set of transaction inputs.
+     * @return set of TransactionInput
+     */
+    private Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
         for (TransactionOutput tout : incomingTx.getOutputs()) {
             if (receiveAddress.equals(tout.getAddressFromP2PKHScript(params))
@@ -416,14 +425,20 @@ public class BitcoinInvoice {
         return inputs;
     }
 
+    /**
+     * This method tries to finish the invoice by creating a send request that pays the transfer payments.
+     * @return SendRequest object or null
+     */
     SendRequest tryFinishInvoice() {
+        // TODO also check confidence at this place
         if (null == incomingTx) {
-            logger.info("Invoice " + invoiceId.toString() + " has not yet been paid.");
+            logger.warn(String.format("Invoice %s has not yet been paid.", invoiceId.toString()));
             return null;
         }
 
+        // TODO also check confidence at this place
         if (null != transferTx) {
-            logger.info("Invoice " + invoiceId.toString() + " is already finished.");
+            logger.warn(String.format("Invoice %s is already finished.", invoiceId.toString()));
             return null;
         }
 
@@ -438,7 +453,7 @@ public class BitcoinInvoice {
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
         transferTx = tx;
-        logger.info(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
+        logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
     }
