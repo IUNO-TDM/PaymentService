@@ -497,6 +497,7 @@ public class BitcoinInvoice {
                         + " to " + receiveAddress
                         + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
                 incomingTx = tx;
+                if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
                 incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
                 payingTransactionConfidenceListener.onConfidenceChanged(incomingTx.getConfidence(),null);
             }
