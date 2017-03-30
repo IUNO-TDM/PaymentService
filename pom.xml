@@ -47,6 +47,7 @@
                     <stopKey>stopit</stopKey>
                     <stopWait>10</stopWait>
                     <httpConnector>
+                        <host>localhost</host>
                         <port>8080</port>
                         <idleTimeout>60000</idleTimeout>
                     </httpConnector>
