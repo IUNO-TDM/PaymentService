@@ -6,6 +6,7 @@ import io.swagger.model.*;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import io.swagger.model.AddressValuePair;
+import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
@@ -19,9 +20,9 @@ import java.io.InputStream;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-14T13:03:20.565Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
 public abstract class InvoicesApiService {
-    public abstract Response addCouponToInvoice(UUID invoiceId,String coupon,SecurityContext securityContext) throws NotFoundException;
+    public abstract Response addCouponToInvoice(UUID invoiceId,Coupon coupon,SecurityContext securityContext) throws NotFoundException;
     public abstract Response addInvoice(Invoice invoice,SecurityContext securityContext) throws NotFoundException;
     public abstract Response deleteInvoiceById(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceBip21(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;

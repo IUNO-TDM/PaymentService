@@ -21,52 +21,30 @@ import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.*;
 
 /**
- * AddressValuePair
+ * Coupon
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
-public class AddressValuePair   {
-  @JsonProperty("address")
-  private String address = null;
+public class Coupon   {
+  @JsonProperty("coupon")
+  private String coupon = null;
 
-  @JsonProperty("coin")
-  private Long coin = null;
-
-  public AddressValuePair address(String address) {
-    this.address = address;
+  public Coupon coupon(String coupon) {
+    this.coupon = coupon;
     return this;
   }
 
    /**
-   * Bitcoin Base58 encoded public key hash address
-   * @return address
+   * bip38 encoded bitcoin private key
+   * @return coupon
   **/
-  @JsonProperty("address")
-  @ApiModelProperty(value = "Bitcoin Base58 encoded public key hash address")
-  public String getAddress() {
-    return address;
+  @JsonProperty("coupon")
+  @ApiModelProperty(value = "bip38 encoded bitcoin private key")
+  public String getCoupon() {
+    return coupon;
   }
 
-  public void setAddress(String address) {
-    this.address = address;
-  }
-
-  public AddressValuePair coin(Long coin) {
-    this.coin = coin;
-    return this;
-  }
-
-   /**
-   * value in Satoshis
-   * @return coin
-  **/
-  @JsonProperty("coin")
-  @ApiModelProperty(value = "value in Satoshis")
-  public Long getCoin() {
-    return coin;
-  }
-
-  public void setCoin(Long coin) {
-    this.coin = coin;
+  public void setCoupon(String coupon) {
+    this.coupon = coupon;
   }
 
 
@@ -78,24 +56,22 @@ public class AddressValuePair   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    AddressValuePair addressValuePair = (AddressValuePair) o;
-    return Objects.equals(this.address, addressValuePair.address) &&
-        Objects.equals(this.coin, addressValuePair.coin);
+    Coupon coupon = (Coupon) o;
+    return Objects.equals(this.coupon, coupon.coupon);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(address, coin);
+    return Objects.hash(coupon);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class AddressValuePair {\n");
+    sb.append("class Coupon {\n");
     
-    sb.append("    address: ").append(toIndentedString(address)).append("\n");
-    sb.append("    coin: ").append(toIndentedString(coin)).append("\n");
+    sb.append("    coupon: ").append(toIndentedString(coupon)).append("\n");
     sb.append("}");
     return sb.toString();
   }

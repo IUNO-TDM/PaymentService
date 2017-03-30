@@ -26,11 +26,13 @@ import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
+import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
@@ -42,21 +44,19 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoiceCallbackInterface {
-    final NetworkParameters params = TestNet3Params.get();
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
     private PeerGroup peerGroup = null;
-    private Logger logger;
+    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
     private DateTime lastCleanup = DateTime.now();
+    private DeterministicSeed randomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
@@ -66,36 +66,78 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
     private static Bitcoin instance;
+    private Context context;
 
     private Bitcoin() {
-        logger = LoggerFactory.getLogger(Bitcoin.class);
         BriefLogFormatter.initWithSilentBitcoinJ();
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
         rootLogger.setLevel(Level.toLevel("info"));
+
+        // Context.enableStrictMode();
+        final NetworkParameters params = TestNet3Params.get();
+        context = new Context(params);
+        Context.propagate(context);
+
+        byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
+        List<String> mnemonic = new ArrayList<>(0);
+        randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
     }
 
     public static synchronized Bitcoin getInstance() {
         if (Bitcoin.instance == null) {
             Bitcoin.instance = new Bitcoin();
+        } else {
+            Context.propagate(instance.context);
         }
         return Bitcoin.instance;
     }
 
     public void start() { // TODO: this method must be called once only!
-        String homeDir = System.getProperty("user.home");
-        File chainFile = new File(homeDir, PREFIX + ".spvchain");
-        File walletFile = new File(homeDir, PREFIX + ".wallet");
+        String workDir = System.getProperty("user.home") + "/." + PREFIX;
+        new File(workDir).mkdirs();
 
-        // create new wallet system
+        File chainFile = new File(workDir, PREFIX + ".spvchain");
+        File walletFile = new File(workDir, PREFIX + ".wallet");
+        File backupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
+//        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middle of april 2017 for a smooth migration from homedir to ~/.PaymentService
+
+        // try to load regular wallet or if not existant load backup wallet or create new wallet
+        // fail if an existing wallet file can not be read and admin needs to examine the wallets
+        String filename = "n/a";
         try {
-            wallet = Wallet.loadFromFile(walletFile);
+            if (walletFile.exists()) {
+                filename = walletFile.toString();
+                wallet = Wallet.loadFromFile(walletFile);
+
+            } else {
+                if (backupFile.exists()) {
+                    filename = backupFile.toString();
+                    wallet = Wallet.loadFromFile(backupFile);
+
+                } else {
+                    wallet = new Wallet(context);
+                }
+                chainFile.delete();
+            }
+
         } catch (UnreadableWalletException e) {
-            logger.warn("creating new wallet");
-            wallet = new Wallet(params);
+            logger.warn(String.format("wallet file %s could not be read: %s", filename, e.getMessage()));
+            e.printStackTrace();
+            return;
         }
 
+        // eventually create backup file
+        try {
+            if (!backupFile.exists()) wallet.saveToFile(backupFile);
+        } catch (IOException e) {
+            logger.error(String.format("creating backup wallet failed: %s", e.getMessage()));
+            e.printStackTrace();
+            return;
+       }
+
         // wallets configuration
-        if (!chainFile.exists()) wallet.reset(); // reset wallet if chainfile does not exist
+        if (!chainFile.exists())
+            wallet.reset(); // reset wallet if chainfile does not exist
         // wallet.allowSpendingUnconfirmedTransactions();
         wallet.addCoinsReceivedEventListener(this);
         logStatus();
@@ -104,24 +146,25 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         try {
             wallet.autosaveToFile(walletFile, 5, TimeUnit.SECONDS, null).saveNow();
         } catch (IOException e) {
+            logger.error(String.format("creating wallet file failed: %s", e.getMessage()));
             e.printStackTrace();
             return;
         }
 
         // initialize blockchain file
-        BlockChain blockChain = null;
+        BlockChain blockChain;
         try {
-            blockChain = new BlockChain(params, wallet, new SPVBlockStore(params, chainFile));
+            blockChain = new BlockChain(context, wallet, new SPVBlockStore(context.getParams(), chainFile));
         } catch (BlockStoreException e) {
             e.printStackTrace();
             return;
         }
 
         // initialize peer group
-        peerGroup = new PeerGroup(params, blockChain);
+        peerGroup = new PeerGroup(context, blockChain);
         peerGroup.addWallet(wallet);
 
-        peerGroup.addPeerDiscovery(new DnsDiscovery(params));
+        peerGroup.addPeerDiscovery(new DnsDiscovery(context.getParams()));
         Futures.addCallback(peerGroup.startAsync(), new FutureCallback() {
                     @Override
                     public void onSuccess(@Nullable Object o) {
@@ -157,7 +200,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),this);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         couponWallet.addCoinsReceivedEventListener(this);
         peerGroup.addWallet(couponWallet);
@@ -174,7 +217,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         AddressValuePair avp = invoice.addCoupon(key);
         Transaction tx = invoice.tryPayWithCoupons();
         if (null != tx)
-            peerGroup.broadcastTransaction(tx).broadcast();
+            syncBroadcastTransaction(tx);
         return avp;
     }
 
@@ -202,6 +245,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         invoiceHashMap.remove(id);
     }
 
+    public Set<UUID> getInvoiceIds() {
+        return invoiceHashMap.keySet();
+    }
+
     /**
      * Removes all expired invoices.
      */
@@ -219,13 +266,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         lastCleanup = DateTime.now();
     }
 
+    synchronized void syncBroadcastTransaction(Transaction tx) {
+        peerGroup.broadcastTransaction(tx).broadcast();
+    }
+
     @Override
     public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
         logger.info("Received tx with " + tx.getValueSentToMe(wallet).toFriendlyString() + ": " + tx);
 
         HashMap<Address, Coin> foo = new HashMap<>();
         for (TransactionOutput txout : tx.getOutputs()) {
-            Address addr = txout.getAddressFromP2PKHScript(params);
+            Address addr = txout.getAddressFromP2PKHScript(context.getParams());
             Coin value = txout.getValue();
             if (null != addr) {
                 if (! foo.containsKey(addr)) {
@@ -242,7 +293,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
             Transaction txCoupon = bcInvoice.tryPayWithCoupons();
             if (null != txCoupon) {
-                peerGroup.broadcastTransaction(txCoupon).broadcast();
+                // syncBroadcastTransaction(tx);
                 continue;
             }
 
@@ -250,8 +301,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             if (null != sr) {
                 try {
                     wallet.completeTx(sr);
-                    wallet.commitTx(sr.tx);
-                    peerGroup.broadcastTransaction(sr.tx).broadcast();
+                    wallet.maybeCommitTx(sr.tx);
+                    syncBroadcastTransaction(sr.tx);
                 } catch (InsufficientMoneyException e) {
                     e.printStackTrace();
                 }

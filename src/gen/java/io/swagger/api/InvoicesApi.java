@@ -8,6 +8,7 @@ import io.swagger.annotations.ApiParam;
 import io.swagger.jaxrs.*;
 
 import io.swagger.model.AddressValuePair;
+import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
@@ -31,7 +32,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-14T13:03:20.565Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
@@ -47,9 +48,11 @@ public class InvoicesApi  {
         
         @io.swagger.annotations.ApiResponse(code = 409, message = "invoice already closed", response = AddressValuePair.class),
         
+        @io.swagger.annotations.ApiResponse(code = 422, message = "coupon code is invalid", response = AddressValuePair.class),
+        
         @io.swagger.annotations.ApiResponse(code = 503, message = "balance of coupon could not be retrieved", response = AddressValuePair.class) })
     public Response addCouponToInvoice(@ApiParam(value = "the id of the invoice the coupon is for",required=true) @PathParam("invoiceId") UUID invoiceId
-,@ApiParam(value = "" ,required=true) String coupon
+,@ApiParam(value = "coupon code" ,required=true) Coupon coupon
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.addCouponToInvoice(invoiceId,coupon,securityContext);

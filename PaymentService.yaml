@@ -175,9 +175,9 @@ paths:
       - name: coupon
         in: body
         required: true
+        description: coupon code
         schema:
-          type: string
-          description: Bip38 encoded Bitcoin private key
+            $ref: '#/definitions/Coupon'
       responses:
         503:
           description: balance of coupon could not be retrieved
@@ -305,6 +305,13 @@ definitions:
         type: integer
         format: int32
         description: depth of a building transaction in blocks
+
+  Coupon:
+    type: object
+    properties:
+      coupon:
+        type: string
+        description: bip38 encoded bitcoin private key
 
   Error:
     type: object

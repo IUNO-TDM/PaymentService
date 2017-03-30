@@ -17,28 +17,25 @@
  */
 package iuno.tdm.paymentservice;
 
+import com.google.common.base.Stopwatch;
 import com.google.common.io.BaseEncoding;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import org.bitcoinj.core.*;
-import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.uri.BitcoinURI;
-import org.bitcoinj.wallet.KeyChainGroup;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.WalletTransaction;
+import org.bitcoinj.wallet.*;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.*;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
 
 import static com.google.common.base.Preconditions.checkState;
 
@@ -49,7 +46,7 @@ import static com.google.common.base.Preconditions.checkState;
  */
 
 public class BitcoinInvoice {
-    private final NetworkParameters params = TestNet3Params.get(); // TODO hardcoding this is an ugly hack
+    private final NetworkParameters params = Context.get().getParams();
     private long totalAmount = 0;
     private long transferAmount = 0;
     private UUID invoiceId;
@@ -57,7 +54,11 @@ public class BitcoinInvoice {
     private Date expiration;
     private Address payDirect; // http://bitcoin.stackexchange.com/questions/38947/how-to-get-balance-from-a-specific-address-in-bitcoinj
     private Address payTransfers;
-    private Logger logger;
+    private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
+
+
+    private KeyChainGroup group;
+    private Wallet couponWallet;
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
 
@@ -109,13 +110,15 @@ public class BitcoinInvoice {
             this.ecKey = ecKey;
         }
     }
-    final KeyChainGroup group = new KeyChainGroup(params); // TODO this takes an awful lot of time on raspberry pi
-    final Wallet couponWallet = new Wallet(params, group);
 
     Vector<Coupon> coupons = new Vector<>();
+    Vector<String> keys = new Vector<>();
 
     AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
         if (isExpired()) throw new IllegalStateException("invoice is already expired");
+
+        if (keys.contains(key)) throw new IllegalStateException("coupon was already added");
+        keys.add(key);
 
         Coupon coupon = new Coupon(DumpedPrivateKey.fromBase58(params, key).getKey());
         final String pubKeyHash = coupon.ecKey.toAddress(params).toBase58();
@@ -181,11 +184,13 @@ public class BitcoinInvoice {
         URL url;
         String response = "";
         url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
-        BufferedReader in = new BufferedReader(new InputStreamReader(url.openStream()));
+        HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+        BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
             response += line;
         }
+        con.disconnect();
         return response;
     }
 
@@ -268,8 +273,7 @@ public class BitcoinInvoice {
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface) throws IllegalArgumentException {
-        logger = LoggerFactory.getLogger(Bitcoin.class);
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
         // check sanity of invoice
         totalAmount = inv.getTotalAmount();
@@ -297,6 +301,13 @@ public class BitcoinInvoice {
         referenceId = inv.getReferenceId();
         payDirect = addr;
         payTransfers = addr2;
+
+        Stopwatch watch = Stopwatch.createStarted();
+        group = new KeyChainGroup(params, seed);
+        group.setLookaheadSize(4);
+        couponWallet = new Wallet(params, group);
+        watch.stop();
+        logger.info("wallet took {}", watch);
 
         couponWallet.allowSpendingUnconfirmedTransactions();
     }

@@ -28,7 +28,7 @@ import javax.validation.constraints.*;
 /**
  * Invoice
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-14T13:03:20.565Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
 public class Invoice   {
   @JsonProperty("totalAmount")
   private Long totalAmount = null;
