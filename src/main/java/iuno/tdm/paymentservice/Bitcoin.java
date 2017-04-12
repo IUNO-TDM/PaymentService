@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -172,7 +173,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
                     @Override
                     public void onSuccess(@Nullable Object o) {
                         logger.info("peer group finished starting");
-                        peerGroup.connectToLocalHost();
+                        peerGroup.connectTo(new InetSocketAddress("tdm-payment.axoom.cloud", 18333)); // TODO make this configurable
                         peerGroup.startBlockChainDownload(new DownloadProgressTracker());
                     }
 
