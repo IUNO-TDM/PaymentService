@@ -244,6 +244,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getState();
     }
 
+    public State getInvoiceTransferState(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).getTransferState();
+    }
+
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         Wallet couponWallet = bcInvoice.getCouponWallet();

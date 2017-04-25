@@ -376,6 +376,12 @@ public class BitcoinInvoice {
         return mapConfidenceToState(confidence);
     }
 
+    State getTransferState() {
+        TransactionConfidence confidence = null;
+        if (null != transferTx) confidence = transferTx.getConfidence();
+        return mapConfidenceToState(confidence);
+    }
+
     /**
      * This method maps a bitcoin transaction confidence object to an object defined using swagger.
      * @param confidence a bitcoinj TransactionConfidence object

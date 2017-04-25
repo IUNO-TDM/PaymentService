@@ -119,7 +119,7 @@ paths:
 
   /invoices/{invoiceId}/state:
     get:
-      summary: Returns a confidence object that describes the invoices state.
+      summary: Returns a confidence object that describes the state of the incoming tx.
       operationId: getInvoiceState
       parameters:
         - name: invoiceId
@@ -134,7 +134,32 @@ paths:
           schema:
             $ref: '#/definitions/Error'
         200:
-          description: returns the address value pairs for the invoice as array
+          description: returns the state object of the incoming tx
+          schema:
+            $ref: '#/definitions/State'
+            
+  /invoices/{invoiceId}/transferState:
+    get:
+      summary: Returns a confidence object that describes the state of the transfer tx.
+      operationId: getInvoiceTransferState
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the invoice id to get the state for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        423:
+          description: no transfer state because there are no transfers in the invoice
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the state object of the transfer tx
           schema:
             $ref: '#/definitions/State'
 

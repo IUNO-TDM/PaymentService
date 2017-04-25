@@ -1,7 +1,6 @@
 package io.swagger.api.impl;
 
 import io.swagger.api.*;
-import io.swagger.model.*;
 
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Coupon;
@@ -18,21 +17,17 @@ import java.util.UUID;
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
-import java.io.InputStream;
-
 import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.WrongNetworkException;
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import javax.validation.constraints.*;
+
 import iuno.tdm.paymentservice.Bitcoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 
@@ -162,6 +157,22 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         err.setMessage("success");
         try {
             State state = Bitcoin.getInstance().getInvoiceState(invoiceId);
+            resp = Response.ok().entity(state).build();
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            resp = Response.status(404).entity(err).build();
+        }
+        logger.info(String.format("%s (%03d) getInvoiceState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
+    }
+    @Override
+    public Response getInvoiceTransferState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        try {
+            State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
             resp = Response.ok().entity(state).build();
 
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID

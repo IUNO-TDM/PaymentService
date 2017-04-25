@@ -25,7 +25,7 @@ import javax.validation.constraints.*;
  * invoice confidence state
  */
 @ApiModel(description = "invoice confidence state")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
 public class State   {
   /**
    * confidence state

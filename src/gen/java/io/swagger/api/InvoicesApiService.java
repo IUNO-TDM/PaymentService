@@ -20,7 +20,7 @@ import java.io.InputStream;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
 public abstract class InvoicesApiService {
     public abstract Response addCouponToInvoice(UUID invoiceId,Coupon coupon,SecurityContext securityContext) throws NotFoundException;
     public abstract Response addInvoice(Invoice invoice,SecurityContext securityContext) throws NotFoundException;
@@ -30,6 +30,7 @@ public abstract class InvoicesApiService {
     public abstract Response getInvoiceCouponBalance(UUID invoiceId,String couponAddress,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceCoupons(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceState(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
+    public abstract Response getInvoiceTransferState(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceTransfers(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoices(SecurityContext securityContext) throws NotFoundException;
 }
