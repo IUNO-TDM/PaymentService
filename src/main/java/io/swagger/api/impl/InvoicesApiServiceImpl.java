@@ -172,7 +172,10 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         Error err = new Error();
         err.setMessage("success");
         try {
-            if (Bitcoin.getInstance().hasInvoiceTransfers(invoiceId)){
+            List<AddressValuePair> transfers = Bitcoin.getInstance().getInvoiceTransfers(invoiceId);
+
+            //transfers always has one entry for the receiving transfer, no matter if there are any transfers specified
+            if (transfers.size() > 1){
                 State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
                 resp = Response.ok().entity(state).build();
             }else{
