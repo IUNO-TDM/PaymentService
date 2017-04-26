@@ -353,9 +353,20 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
 
     }
+    public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
+        for (BitcoinCallbackInterface client:callbackClients) {
+            client.invoiceTransferStateChanged(invoice,state);
+        }
+
+    }
 
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
         sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
+    }
+
+    @Override
+    public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
+        sendInvoiceTransferStateChangeToCallbackClients(invoice.getInvoice(),state);
     }
 }

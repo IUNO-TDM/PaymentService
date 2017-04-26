@@ -98,7 +98,7 @@ public class BitcoinInvoice {
      */
     private List<TransferPair> transfers = new Vector<>();
 
-    private TransactionConfidence.Listener payingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
+    private TransactionConfidence.Listener incomingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
         @Override
         public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
             if (bitcoinInvoiceCallbackInterface != null){
@@ -111,6 +111,23 @@ public class BitcoinInvoice {
                         confidence.getDepthInBlocks(),
                         reason.toString()));
                 bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
+            }
+        }
+    };
+
+    private TransactionConfidence.Listener transferTransactionConfidenceListener =  new TransactionConfidence.Listener() {
+        @Override
+        public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
+            if (bitcoinInvoiceCallbackInterface != null){
+                State state = mapConfidenceToState(confidence);
+                logger.info(String.format("%s tx %s changed state to (%s, %d, %d) for change reason %s",
+                        invoiceId,
+                        confidence.getTransactionHash().toString(),
+                        confidence.getConfidenceType().toString(),
+                        confidence.numBroadcastPeers(),
+                        confidence.getDepthInBlocks(),
+                        reason.toString()));
+                bitcoinInvoiceCallbackInterface.invoiceTransferStateChanged(BitcoinInvoice.this, state);
             }
         }
     };
@@ -185,7 +202,8 @@ public class BitcoinInvoice {
                 result = sr.tx;
                 incomingTx = sr.tx;
                 transferTx = sr.tx;
-                incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+                incomingTx.getConfidence().addEventListener(incomingTransactionConfidenceListener);
+                incomingTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -527,8 +545,12 @@ public class BitcoinInvoice {
         }
 
         if (null != incomingTx) {
-            incomingTx.getConfidence().removeEventListener(payingTransactionConfidenceListener); // TODO removed just in case it was already added
-            incomingTx.getConfidence().addEventListener(payingTransactionConfidenceListener);
+            incomingTx.getConfidence().removeEventListener(incomingTransactionConfidenceListener); // TODO removed just in case it was already added
+            incomingTx.getConfidence().addEventListener(incomingTransactionConfidenceListener);
+        }
+        if (null != transferTx && !transfers.isEmpty()) {
+            transferTx.getConfidence().removeEventListener(transferTransactionConfidenceListener); // TODO removed just in case it was already added
+            transferTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
         }
     }
 }
