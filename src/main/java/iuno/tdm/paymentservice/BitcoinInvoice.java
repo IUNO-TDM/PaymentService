@@ -394,7 +394,10 @@ public class BitcoinInvoice {
         return mapConfidenceToState(confidence);
     }
 
-    State getTransferState() {
+    State getTransferState() throws NoSuchFieldException {
+        if(transfers.isEmpty()){
+            throw new NoSuchFieldException("TransactionState not applicable. No transfers for this invoice.");
+        }
         TransactionConfidence confidence = null;
         if (null != transferTx) confidence = transferTx.getConfidence();
         return mapConfidenceToState(confidence);

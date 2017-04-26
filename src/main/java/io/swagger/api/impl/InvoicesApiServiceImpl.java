@@ -172,21 +172,18 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         Error err = new Error();
         err.setMessage("success");
         try {
-            List<AddressValuePair> transfers = Bitcoin.getInstance().getInvoiceTransfers(invoiceId);
+            State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
+            resp = Response.ok().entity(state).build();
 
-            //transfers always has one entry for the receiving transfer, no matter if there are any transfers specified
-            if (transfers.size() > 1){
-                State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
-                resp = Response.ok().entity(state).build();
-            }else{
-                err.setMessage("Invoice " + invoiceId + " does not have any transfers");
-                resp = Response.status(423  ).entity(err).build();
-            }
+
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             err.setMessage("no invoice found for id " + invoiceId);
             resp = Response.status(404).entity(err).build();
+        } catch (NoSuchFieldException e) {
+            err.setMessage("Invoice " + invoiceId + ": " + e.getMessage());
+            resp = Response.status(423  ).entity(err).build();
         }
-        logger.info(String.format("%s (%03d) getInvoiceState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        logger.info(String.format("%s (%03d) getInvoiceTransferState: %s", invoiceId, resp.getStatus(), err.getMessage()));
         return resp;
     }
     @Override

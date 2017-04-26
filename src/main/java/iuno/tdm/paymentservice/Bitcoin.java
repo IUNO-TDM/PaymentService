@@ -244,7 +244,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getState();
     }
 
-    public State getInvoiceTransferState(UUID id) throws NullPointerException {
+    public State getInvoiceTransferState(UUID id) throws NullPointerException, NoSuchFieldException {
         return invoiceHashMap.get(id).getTransferState();
     }
 
