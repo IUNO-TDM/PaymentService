@@ -69,14 +69,9 @@ public class BitcoinInvoice {
 
     private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
 
-    /**
-     * This member will be set to the transaction that paid this invoice.
-     */
-    private Transaction incomingTx;
-    /**
-     * This member will be set to the transaction that paid the transfers of this invoice.
-     */
-    private Transaction transferTx;
+    private TransactionList incomingTxList = new TransactionList();
+
+    private TransactionList transferTxList = new TransactionList();
 
     class TransferPair {
         final Address address;
@@ -98,36 +93,30 @@ public class BitcoinInvoice {
      */
     private List<TransferPair> transfers = new Vector<>();
 
-    private TransactionConfidence.Listener incomingTransactionConfidenceListener =  new TransactionConfidence.Listener() {
+    private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
-        public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
+        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
             if (bitcoinInvoiceCallbackInterface != null){
-                State state = mapConfidenceToState(confidence);
-                logger.info(String.format("%s tx %s changed state to (%s, %d, %d) for change reason %s",
-                        invoiceId,
-                        confidence.getTransactionHash().toString(),
-                        confidence.getConfidenceType().toString(),
-                        confidence.numBroadcastPeers(),
-                        confidence.getDepthInBlocks(),
-                        reason.toString()));
                 bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
+                logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
+                        invoiceId,
+                        txHash,
+                        state.getState(),
+                        state.getDepthInBlocks()));
             }
         }
     };
 
-    private TransactionConfidence.Listener transferTransactionConfidenceListener =  new TransactionConfidence.Listener() {
+    private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
-        public void onConfidenceChanged(TransactionConfidence confidence, ChangeReason reason) {
+        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
             if (bitcoinInvoiceCallbackInterface != null){
-                State state = mapConfidenceToState(confidence);
-                logger.info(String.format("%s tx %s changed state to (%s, %d, %d) for change reason %s",
-                        invoiceId,
-                        confidence.getTransactionHash().toString(),
-                        confidence.getConfidenceType().toString(),
-                        confidence.numBroadcastPeers(),
-                        confidence.getDepthInBlocks(),
-                        reason.toString()));
                 bitcoinInvoiceCallbackInterface.invoiceTransferStateChanged(BitcoinInvoice.this, state);
+                logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
+                        invoiceId,
+                        txHash,
+                        state.getState(),
+                        state.getDepthInBlocks()));
             }
         }
     };
@@ -178,7 +167,7 @@ public class BitcoinInvoice {
     Transaction tryPayWithCoupons() {
         Transaction result = null;
         long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
-        if (null != incomingTx) {
+        if (incomingTxList.isOneOrMoreTxPending()) {
             logger.info(String.format("Transaction %s has already been paid.", invoiceId.toString()));
 
         } else if (balance < totalAmount) {
@@ -200,10 +189,8 @@ public class BitcoinInvoice {
                 couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
                 couponWallet.commitTx(sr.tx);
                 result = sr.tx;
-                incomingTx = sr.tx;
-                transferTx = sr.tx;
-                incomingTx.getConfidence().addEventListener(incomingTransactionConfidenceListener);
-                incomingTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
+                incomingTxList.add(sr.tx);
+                transferTxList.add(sr.tx);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -305,6 +292,8 @@ public class BitcoinInvoice {
      */
     BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
+        incomingTxList.addStateListener(incomingTxStateListener);
+        transferTxList.addStateListener(transferTxStateListener);
         // check sanity of invoice
         totalAmount = inv.getTotalAmount();
         if (totalAmount < Transaction.MIN_NONDUST_OUTPUT.getValue())
@@ -389,54 +378,17 @@ public class BitcoinInvoice {
     }
 
     State getState() {
-        TransactionConfidence confidence = null;
-        if (null != incomingTx) confidence = incomingTx.getConfidence();
-        return mapConfidenceToState(confidence);
+        return incomingTxList.getState();
     }
 
     State getTransferState() throws NoSuchFieldException {
         if(transfers.isEmpty()){
             throw new NoSuchFieldException("TransactionState not applicable. No transfers for this invoice.");
         }
-        TransactionConfidence confidence = null;
-        if (null != transferTx) confidence = transferTx.getConfidence();
-        return mapConfidenceToState(confidence);
+        return transferTxList.getState();
     }
 
-    /**
-     * This method maps a bitcoin transaction confidence object to an object defined using swagger.
-     * @param confidence a bitcoinj TransactionConfidence object
-     * @return confidence state as swagger object
-     */
-    static public State mapConfidenceToState(TransactionConfidence confidence) {
-        State result = new State();
-        result.setState(State.StateEnum.UNKNOWN);
-        result.setDepthInBlocks(Integer.MIN_VALUE);
-        if (confidence != null) {
-            switch (confidence.getConfidenceType()) {
-                case BUILDING:
-                    result.setState(State.StateEnum.BUILDING);
-                    result.setDepthInBlocks(confidence.getDepthInBlocks());
-                    break;
-                case PENDING:
-                    result.setState(State.StateEnum.PENDING);
-                    result.setDepthInBlocks(Integer.MIN_VALUE + confidence.numBroadcastPeers());
-                    break;
-                case DEAD:
-                    result.setState(State.StateEnum.DEAD);
-                    result.setDepthInBlocks(Integer.MIN_VALUE);
-                    break;
-                case IN_CONFLICT:
-                    result.setState(State.StateEnum.CONFLICT);
-                    result.setDepthInBlocks(Integer.MIN_VALUE);
-                    break;
-                case UNKNOWN:
-                default:
-            }
-        }
 
-        return result;
-    }
 
     /**
      * Get all spendable outputs of the incoming transaction and return them as set of transaction inputs.
@@ -444,14 +396,15 @@ public class BitcoinInvoice {
      */
     private Set<TransactionInput> getInputs() {
         Set<TransactionInput> inputs = new HashSet<>();
-        for (TransactionOutput tout : incomingTx.getOutputs()) {
+        Transaction relevantTx = incomingTxList.getMostConfidentTransaction();
+        for (TransactionOutput tout : relevantTx.getOutputs()) {
             if (receiveAddress.equals(tout.getAddressFromP2PKHScript(params))
                     && tout.isAvailableForSpending()) {
                 int index = tout.getIndex();
-                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, incomingTx);
+                TransactionOutPoint txOutpoint = new TransactionOutPoint(params, index, relevantTx);
                 byte[] script = tout.getScriptBytes();
                 TransactionInput txin; // TODO check if script needs to contain something
-                txin = new TransactionInput(params, incomingTx, script, txOutpoint);
+                txin = new TransactionInput(params, relevantTx, script, txOutpoint);
                 txin.clearScriptBytes();
                 inputs.add(txin);
             }
@@ -464,22 +417,20 @@ public class BitcoinInvoice {
      * @return SendRequest object or null
      */
     SendRequest tryFinishInvoice() {
-        // TODO also check confidence at this place
-        if (null == incomingTx) {
+        if (!incomingTxList.isOneOrMoreTxPending()) {
             logger.warn(String.format("Invoice %s has not yet been paid.", invoiceId.toString()));
             return null;
         }
 
-        // TODO also check confidence at this place
-        if (null != transferTx) {
-            logger.warn(String.format("Invoice %s is already finished.", invoiceId.toString()));
+        if (transferTxList.isOneOrMoreTxPending()) {
+            logger.warn(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
             return null;
         }
 
         Transaction tx = new Transaction(params);
 
         // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-        if (TransactionConfidence.ConfidenceType.BUILDING == incomingTx.getConfidence().getConfidenceType())
+        if (incomingTxList.isOneOrMoreTxConfirmed(0))
             for (TransactionInput txin : getInputs())
                 tx.addInput(txin);
 
@@ -487,8 +438,7 @@ public class BitcoinInvoice {
 
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
-        transferTx = tx;
-        transferTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
+        transferTxList.add(tx);
         logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
@@ -533,28 +483,20 @@ public class BitcoinInvoice {
                 logger.info("Received direct payment for invoice " + invoiceId.toString()
                         + " to " + receiveAddress
                         + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
-                incomingTx = tx;
-                if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
+                incomingTxList.add(tx);
+//                if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
             }
 
         } else if (doesTxFulfillTransferPayment(addressCoinHashMap)) {
             logger.info("Received transfer payment for invoice " + invoiceId.toString()
                     + " to " + transferAddress);
-            incomingTx = tx;
-            transferTx = tx;
+            incomingTxList.add(tx);
+            transferTxList.add(tx);
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
                     invoiceId, tx.getHash().toString()));
         }
 
-        if (null != incomingTx) {
-            incomingTx.getConfidence().removeEventListener(incomingTransactionConfidenceListener); // TODO removed just in case it was already added
-            incomingTx.getConfidence().addEventListener(incomingTransactionConfidenceListener);
-        }
-        if (null != transferTx && !transfers.isEmpty()) {
-            transferTx.getConfidence().removeEventListener(transferTransactionConfidenceListener); // TODO removed just in case it was already added
-            transferTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
-        }
     }
 }
