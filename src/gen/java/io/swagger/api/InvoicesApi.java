@@ -32,7 +32,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-21T07:03:03.830Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
@@ -148,15 +148,31 @@ public class InvoicesApi  {
     @Path("/{invoiceId}/state")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
-    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the invoices state.", notes = "", response = State.class, tags={  })
+    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the incoming tx.", notes = "", response = State.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the address value pairs for the invoice as array", response = State.class),
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the incoming tx", response = State.class),
         
         @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = State.class) })
     public Response getInvoiceState(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.getInvoiceState(invoiceId,securityContext);
+    }
+    @GET
+    @Path("/{invoiceId}/transferState")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
+    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the transfer tx.", notes = "", response = State.class, tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = State.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = State.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 423, message = "no transfer state because there are no transfers in the invoice", response = State.class) })
+    public Response getInvoiceTransferState(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getInvoiceTransferState(invoiceId,securityContext);
     }
     @GET
     @Path("/{invoiceId}/transfers")

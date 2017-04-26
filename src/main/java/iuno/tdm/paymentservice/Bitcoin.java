@@ -244,6 +244,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getState();
     }
 
+    public State getInvoiceTransferState(UUID id) throws NullPointerException, NoSuchFieldException {
+        return invoiceHashMap.get(id).getTransferState();
+    }
+
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         Wallet couponWallet = bcInvoice.getCouponWallet();
@@ -349,9 +353,20 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
 
     }
+    public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
+        for (BitcoinCallbackInterface client:callbackClients) {
+            client.invoiceTransferStateChanged(invoice,state);
+        }
+
+    }
 
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
         sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
+    }
+
+    @Override
+    public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
+        sendInvoiceTransferStateChangeToCallbackClients(invoice.getInvoice(),state);
     }
 }

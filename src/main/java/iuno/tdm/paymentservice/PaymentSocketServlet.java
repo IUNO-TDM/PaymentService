@@ -38,18 +38,25 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                     @Override
                     public Object onEvent(String name, Object[] args, boolean ackRequested) {
                         if (args[0].getClass().equals(String.class)) {
+                            String room = (String) args[0];
                             socket.join((String) args[0]);
                             try{
                                 BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String)args[0]));
                                 String jsonString = buildJsonString(bcInvoice.getInvoice(), bcInvoice.getState());
                                 socket.emit("StateChange", jsonString);
+
+                                try{
+                                    jsonString = buildJsonString(bcInvoice.getInvoice(), bcInvoice.getTransferState());
+                                    socket.emit("TransferStateChange", jsonString);
+                                }catch (NoSuchFieldException e){
+                                    //normal for every tx without transfers
+                                }
                             }catch (NullPointerException e){
                                 logger.error("The requested Invoice does not exists. Cannot send any Stateupdate at " +
                                         "this moment...maybe later", e);
                             } catch (SocketIOException e){
                                 logger.error("Tried to send a first state",e);
                             }
-
                             return "OK";
                         }
                         return "Wrong format";
@@ -80,6 +87,17 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                     String jsonString = buildJsonString(invoice, state);
                     String roomId = invoice.getInvoiceId().toString();
                     of("/invoices").in(roomId).emit("StateChange", jsonString);
+                } catch (SocketIOException e) {
+                    logger.error("SocketIOException in invoiceStateChanged ", e);
+                }
+            }
+            @Override
+            public void invoiceTransferStateChanged(Invoice invoice, State state) {
+                try {
+                    //TODO find more elegant way to generate a JSON object
+                    String jsonString = buildJsonString(invoice, state);
+                    String roomId = invoice.getInvoiceId().toString();
+                    of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
                 } catch (SocketIOException e) {
                     logger.error("SocketIOException in invoiceStateChanged ", e);
                 }
