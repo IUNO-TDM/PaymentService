@@ -172,9 +172,13 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         Error err = new Error();
         err.setMessage("success");
         try {
-            State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
-            resp = Response.ok().entity(state).build();
-
+            if (Bitcoin.getInstance().hasInvoiceTransfers(invoiceId)){
+                State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
+                resp = Response.ok().entity(state).build();
+            }else{
+                err.setMessage("Invoice " + invoiceId + " does not have any transfers");
+                resp = Response.status(423  ).entity(err).build();
+            }
         } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
             err.setMessage("no invoice found for id " + invoiceId);
             resp = Response.status(404).entity(err).build();

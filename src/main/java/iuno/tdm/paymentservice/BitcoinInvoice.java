@@ -485,6 +485,7 @@ public class BitcoinInvoice {
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
         transferTx = tx;
+        transferTx.getConfidence().addEventListener(transferTransactionConfidenceListener);
         logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
