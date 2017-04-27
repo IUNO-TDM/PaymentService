@@ -162,7 +162,54 @@ paths:
           description: returns the state object of the transfer tx
           schema:
             $ref: '#/definitions/State'
+            
+  /invoices/{invoiceId}/payingTransactions:
+    get:
+      summary: Returns all transaction that are paying this PaymentService
+      operationId: getInvoicePayingTransactions
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the invoice id to get the state for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the state object of the transfer tx
+          schema:
+            $ref: '#/definitions/Transactions'
 
+  
+  /invoices/{invoiceId}/transferTransactions:
+    get:
+      summary: Returns all transaction that are paying transfers
+      operationId: getInvoiceTransferTransactions
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the invoice id to get the state for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        423:
+          description: no tx because there are no transfers in the invoice
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the state object of the transfer tx
+          schema:
+            $ref: '#/definitions/Transactions'
+            
   /invoices/{invoiceId}/transfers:
     get:
       summary: Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
@@ -344,3 +391,15 @@ definitions:
       message:
         type: string
         description: meaningful error message
+        
+  Transactions:
+    type: array
+    items:
+      type: object
+      properties:
+        transaction:
+          type: string
+          description: tx hash
+        state:
+          $ref: '#/definitions/State'
+          

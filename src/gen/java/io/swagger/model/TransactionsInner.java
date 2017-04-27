@@ -18,55 +18,56 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import io.swagger.model.State;
 import javax.validation.constraints.*;
 
 /**
- * AddressValuePair
+ * TransactionsInner
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
-public class AddressValuePair   {
-  @JsonProperty("address")
-  private String address = null;
+public class TransactionsInner   {
+  @JsonProperty("transaction")
+  private String transaction = null;
 
-  @JsonProperty("coin")
-  private Long coin = null;
+  @JsonProperty("state")
+  private State state = null;
 
-  public AddressValuePair address(String address) {
-    this.address = address;
+  public TransactionsInner transaction(String transaction) {
+    this.transaction = transaction;
     return this;
   }
 
    /**
-   * Bitcoin Base58 encoded public key hash address
-   * @return address
+   * tx hash
+   * @return transaction
   **/
-  @JsonProperty("address")
-  @ApiModelProperty(value = "Bitcoin Base58 encoded public key hash address")
-  public String getAddress() {
-    return address;
+  @JsonProperty("transaction")
+  @ApiModelProperty(value = "tx hash")
+  public String getTransaction() {
+    return transaction;
   }
 
-  public void setAddress(String address) {
-    this.address = address;
+  public void setTransaction(String transaction) {
+    this.transaction = transaction;
   }
 
-  public AddressValuePair coin(Long coin) {
-    this.coin = coin;
+  public TransactionsInner state(State state) {
+    this.state = state;
     return this;
   }
 
    /**
-   * value in Satoshis
-   * @return coin
+   * Get state
+   * @return state
   **/
-  @JsonProperty("coin")
-  @ApiModelProperty(value = "value in Satoshis")
-  public Long getCoin() {
-    return coin;
+  @JsonProperty("state")
+  @ApiModelProperty(value = "")
+  public State getState() {
+    return state;
   }
 
-  public void setCoin(Long coin) {
-    this.coin = coin;
+  public void setState(State state) {
+    this.state = state;
   }
 
 
@@ -78,24 +79,24 @@ public class AddressValuePair   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    AddressValuePair addressValuePair = (AddressValuePair) o;
-    return Objects.equals(this.address, addressValuePair.address) &&
-        Objects.equals(this.coin, addressValuePair.coin);
+    TransactionsInner transactionsInner = (TransactionsInner) o;
+    return Objects.equals(this.transaction, transactionsInner.transaction) &&
+        Objects.equals(this.state, transactionsInner.state);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(address, coin);
+    return Objects.hash(transaction, state);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class AddressValuePair {\n");
+    sb.append("class TransactionsInner {\n");
     
-    sb.append("    address: ").append(toIndentedString(address)).append("\n");
-    sb.append("    coin: ").append(toIndentedString(coin)).append("\n");
+    sb.append("    transaction: ").append(toIndentedString(transaction)).append("\n");
+    sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("}");
     return sb.toString();
   }

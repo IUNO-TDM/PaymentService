@@ -22,6 +22,7 @@ import com.google.common.io.BaseEncoding;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
@@ -388,6 +389,17 @@ public class BitcoinInvoice {
         return transferTxList.getState();
     }
 
+    Transactions getPayingTransactions(){
+        return incomingTxList.getTransactions();
+    }
+
+    Transactions getTransferTransactions() throws NoSuchFieldException{
+        if(transfers.isEmpty()){
+            throw new NoSuchFieldException("getTransferTransactions not applicable. No transfers for this invoice.");
+        }
+        return transferTxList.getTransactions();
+    }
+
     /**
      * Get all spendable outputs of the incoming transaction and return them as set of transaction inputs.
      * @return set of TransactionInput
@@ -415,11 +427,14 @@ public class BitcoinInvoice {
      * @return SendRequest object or null
      */
     SendRequest tryFinishInvoice() {
+        if(transfers.isEmpty()){
+            logger.warn(String.format("Invoice %s has no transfers.", invoiceId.toString()));
+            return null;
+        }
         if (!incomingTxList.isOneOrMoreTxPending()) {
             logger.warn(String.format("Invoice %s has not yet been paid.", invoiceId.toString()));
             return null;
         }
-
         if (transferTxList.isOneOrMoreTxPending()) {
             logger.warn(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
             return null;
@@ -489,7 +504,7 @@ public class BitcoinInvoice {
             logger.info("Received transfer payment for invoice " + invoiceId.toString()
                     + " to " + transferAddress);
             incomingTxList.add(tx);
-            transferTxList.add(tx);
+            if(!transfers.isEmpty())transferTxList.add(tx);
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",

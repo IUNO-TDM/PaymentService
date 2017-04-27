@@ -12,6 +12,7 @@ import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
 import java.util.UUID;
 
 import java.util.List;
@@ -32,7 +33,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
@@ -145,6 +146,20 @@ public class InvoicesApi  {
         return delegate.getInvoiceCoupons(invoiceId,securityContext);
     }
     @GET
+    @Path("/{invoiceId}/payingTransactions")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
+    @io.swagger.annotations.ApiOperation(value = "Returns all transaction that are paying this PaymentService", notes = "", response = Transactions.class, tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = Transactions.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Transactions.class) })
+    public Response getInvoicePayingTransactions(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getInvoicePayingTransactions(invoiceId,securityContext);
+    }
+    @GET
     @Path("/{invoiceId}/state")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
@@ -173,6 +188,22 @@ public class InvoicesApi  {
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.getInvoiceTransferState(invoiceId,securityContext);
+    }
+    @GET
+    @Path("/{invoiceId}/transferTransactions")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
+    @io.swagger.annotations.ApiOperation(value = "Returns all transaction that are paying transfers", notes = "", response = Transactions.class, tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = Transactions.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Transactions.class),
+        
+        @io.swagger.annotations.ApiResponse(code = 423, message = "no tx because there are no transfers in the invoice", response = Transactions.class) })
+    public Response getInvoiceTransferTransactions(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getInvoiceTransferTransactions(invoiceId,securityContext);
     }
     @GET
     @Path("/{invoiceId}/transfers")

@@ -1,6 +1,8 @@
 package iuno.tdm.paymentservice;
 
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
+import io.swagger.model.TransactionsInner;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
@@ -64,6 +66,17 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     public Transaction getMostConfidentTransaction(){
         return transactions.get(determineMostConfidentTransactionConfidence().getTransactionHash());
+    }
+
+    public Transactions getTransactions(){
+        Transactions txes = new Transactions();
+        for (Map.Entry<Sha256Hash,Transaction> element: transactions.entrySet()) {
+            TransactionsInner transactionsInner = new TransactionsInner();
+            transactionsInner.setTransaction(element.getKey().toString());
+            transactionsInner.setState(mapConfidenceToState(element.getValue().getConfidence()));
+            txes.add(transactionsInner);
+        }
+        return txes;
     }
 
     private TransactionConfidence determineMostConfidentTransactionConfidence(){
@@ -162,7 +175,7 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     static private boolean statesAreDifferent(State state1, State state2){
         boolean rv = false;
-        if(state1.getState() != state2.getState() || state1.getDepthInBlocks() != state2.getDepthInBlocks()){
+        if(!state1.getState().equals(state2.getState()) || state1.getDepthInBlocks().equals(state2.getDepthInBlocks())){
             rv = true;
         }
         return rv;

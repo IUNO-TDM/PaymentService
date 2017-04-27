@@ -14,39 +14,16 @@
 package io.swagger.model;
 
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.model.TransactionsInner;
+import java.util.ArrayList;
+import java.util.List;
 import javax.validation.constraints.*;
 
 /**
- * Coupon
+ * Transactions
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
-public class Coupon   {
-  @JsonProperty("coupon")
-  private String coupon = null;
-
-  public Coupon coupon(String coupon) {
-    this.coupon = coupon;
-    return this;
-  }
-
-   /**
-   * bip38 encoded bitcoin private key
-   * @return coupon
-  **/
-  @JsonProperty("coupon")
-  @ApiModelProperty(value = "bip38 encoded bitcoin private key")
-  public String getCoupon() {
-    return coupon;
-  }
-
-  public void setCoupon(String coupon) {
-    this.coupon = coupon;
-  }
-
+public class Transactions extends ArrayList<TransactionsInner>  {
 
   @Override
   public boolean equals(java.lang.Object o) {
@@ -56,22 +33,20 @@ public class Coupon   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coupon coupon = (Coupon) o;
-    return Objects.equals(this.coupon, coupon.coupon);
+    return true;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(coupon);
+    return Objects.hash(super.hashCode());
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Coupon {\n");
-    
-    sb.append("    coupon: ").append(toIndentedString(coupon)).append("\n");
+    sb.append("class Transactions {\n");
+    sb.append("    ").append(toIndentedString(super.toString())).append("\n");
     sb.append("}");
     return sb.toString();
   }
