@@ -31,11 +31,12 @@ public class TransactionList implements TransactionConfidence.Listener {
     private static final Logger logger = LoggerFactory.getLogger(TransactionList.class);
 
     public void add(Transaction transaction){
-
+        logger.debug("Adding tx %s to TransactionList", transaction.getHashAsString());
         if(!transactions.containsKey(transaction.getHash())){
             transactions.put(transaction.getHash(),transaction);
             transaction.getConfidence().addEventListener(this);
         }
+        logger.debug("This list has now %d transactions", transactions.size());
     }
 
     public void addStateListener(TransactionListStateListener listener){
@@ -161,9 +162,7 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     static private boolean statesAreDifferent(State state1, State state2){
         boolean rv = false;
-        if(state1.getState() != state2.getState()){
-            rv = true;
-        }else if(state1.getDepthInBlocks() != state2.getDepthInBlocks()){
+        if(state1.getState() != state2.getState() || state1.getDepthInBlocks() != state2.getDepthInBlocks()){
             rv = true;
         }
         return rv;

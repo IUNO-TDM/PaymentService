@@ -190,7 +190,7 @@ public class BitcoinInvoice {
                 couponWallet.commitTx(sr.tx);
                 result = sr.tx;
                 incomingTxList.add(sr.tx);
-                transferTxList.add(sr.tx);
+                if(!transfers.isEmpty())transferTxList.add(sr.tx);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -387,8 +387,6 @@ public class BitcoinInvoice {
         }
         return transferTxList.getState();
     }
-
-
 
     /**
      * Get all spendable outputs of the incoming transaction and return them as set of transaction inputs.
