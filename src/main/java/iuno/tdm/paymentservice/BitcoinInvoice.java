@@ -106,6 +106,16 @@ public class BitcoinInvoice {
                         state.getDepthInBlocks()));
             }
         }
+
+        @Override
+        public void transactionsOrStatesChanged(Transactions transactions) {
+            if (bitcoinInvoiceCallbackInterface != null){
+                bitcoinInvoiceCallbackInterface.invoicePayingTransactionsChanged(BitcoinInvoice.this, transactions);
+                logger.info(String.format("%s transaction count or state changed: Count %d",
+                        invoiceId,
+                        transactions.size()));
+            }
+        }
     };
 
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
@@ -118,6 +128,16 @@ public class BitcoinInvoice {
                         txHash,
                         state.getState(),
                         state.getDepthInBlocks()));
+            }
+        }
+
+        @Override
+        public void transactionsOrStatesChanged(Transactions transactions) {
+            if (bitcoinInvoiceCallbackInterface != null){
+                bitcoinInvoiceCallbackInterface.invoiceTransferTransactionsChanged(BitcoinInvoice.this, transactions);
+                logger.info(String.format("%s transaction count or state changed: Count %d",
+                        invoiceId,
+                        transactions.size()));
             }
         }
     };

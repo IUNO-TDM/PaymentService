@@ -23,7 +23,7 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     State lastState = null;
     Sha256Hash lastMostConfidentTxHash = null;
-
+    Transactions lastTransactions = null;
 
     private static final int UNKNOWN_RATING = 0;
     private static final int DEAD_RATING = 1;
@@ -39,6 +39,7 @@ public class TransactionList implements TransactionConfidence.Listener {
             transaction.getConfidence().addEventListener(this);
         }
         logger.debug("This list has now %d transactions", transactions.size());
+        informStateListenersTransactionsChanged(getTransactions());
     }
 
     public void addStateListener(TransactionListStateListener listener){
@@ -181,6 +182,35 @@ public class TransactionList implements TransactionConfidence.Listener {
         return rv;
     }
 
+    static private boolean transactionsAreDifferent(Transactions transactions1, Transactions transactions2){
+        boolean rv = false;
+        if(transactions1 == null ^ transactions2 == null){
+            rv = true;
+        }else if(transactions1 != null && transactions2 != null){
+            if(transactions1.size() != transactions2.size()){
+                rv = true;
+            }else{
+                boolean noMatch = false;
+                for (TransactionsInner tx1 :transactions1) {
+                    noMatch = true;
+                    for (TransactionsInner tx2: transactions2){
+                        if(tx1.getTransaction().equals(tx2.getTransaction())){
+                            if(!statesAreDifferent(tx1.getState(),tx2.getState())){
+                                noMatch = false;
+                                break;
+                            }
+                        }
+                    }
+                    if(noMatch){
+                        rv=true;
+                        break;
+                    }
+                }
+            }
+        }
+        return rv;
+    }
+
     protected void cleanup(){
         for (Transaction tx :transactions.values()) {
             tx.getConfidence().removeEventListener(this);
@@ -224,14 +254,26 @@ public class TransactionList implements TransactionConfidence.Listener {
             }
         }
         if(refreshNeeded){
-            informStateListeners(lastMostConfidentTxHash,lastState);
+            informStateListenersMostConfidentState(lastMostConfidentTxHash,lastState);
+        }
+        Transactions newTransactions = getTransactions();
+        if (transactionsAreDifferent(newTransactions,lastTransactions)){
+            lastTransactions = newTransactions;
+            informStateListenersTransactionsChanged(lastTransactions);
         }
 
     }
 
-    private void informStateListeners( Sha256Hash txHash, State newState){
+    private void informStateListenersMostConfidentState( Sha256Hash txHash, State newState){
         for (TransactionListStateListener listener : listeners) {
             listener.mostConfidentTxStateChanged(txHash,newState);
+        }
+    }
+
+
+    private void informStateListenersTransactionsChanged( Transactions transactions){
+        for (TransactionListStateListener listener : listeners) {
+            listener.transactionsOrStatesChanged(transactions);
         }
     }
 
