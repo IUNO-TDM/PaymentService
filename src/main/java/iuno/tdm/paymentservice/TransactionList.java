@@ -115,33 +115,37 @@ public class TransactionList implements TransactionConfidence.Listener {
         for (Transaction tx : transactions.values()) {
             if (mostConfidentTx == null) {
                 mostConfidentTx = tx;
-            } else {
-                TransactionConfidence txConfidence = tx.getConfidence();
-                TransactionConfidence mostConfidentTxConfidence = mostConfidentTx.getConfidence();
-                int txRating = mapConfidenceTypeRating(txConfidence.getConfidenceType());
-                int mcTxRating = mapConfidenceTypeRating(mostConfidentTxConfidence.getConfidenceType());
+                continue;
+            }
 
-                if (txRating > mcTxRating) {
-                    mostConfidentTx = tx;
-                } else if (txRating == mcTxRating) {
-                    if (txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING) {
-                        if (txConfidence.numBroadcastPeers() > mostConfidentTxConfidence.numBroadcastPeers()) {
-                            mostConfidentTx = tx;
-                        }
-                    } else if (txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
-                        if (txConfidence.getDepthInBlocks() > mostConfidentTxConfidence.getDepthInBlocks()) {
-                            mostConfidentTx = tx;
-                        }
-                    }
-                }
+            TransactionConfidence txConfidence = tx.getConfidence();
+            TransactionConfidence mostConfidentTxConfidence = mostConfidentTx.getConfidence();
+            int txRating = mapConfidenceTypeRating(txConfidence.getConfidenceType());
+            int mcTxRating = mapConfidenceTypeRating(mostConfidentTxConfidence.getConfidenceType());
 
+            if (txRating < mcTxRating)
+                continue;
+
+            if (txRating > mcTxRating) {
+                mostConfidentTx = tx;
+                continue;
+            }
+
+            // rating is equal at this place, let either numBroadcastPeers or DepthInBlocks decide
+            switch (txConfidence.getConfidenceType()) {
+                case PENDING:
+                    if (txConfidence.numBroadcastPeers() > mostConfidentTxConfidence.numBroadcastPeers())
+                        mostConfidentTx = tx;
+                    break;
+                case BUILDING:
+                    if (txConfidence.getDepthInBlocks() > mostConfidentTxConfidence.getDepthInBlocks())
+                        mostConfidentTx = tx;
+                    break;
+                default:
             }
         }
-        TransactionConfidence conf = null;
-        if (mostConfidentTx != null) {
-            conf = mostConfidentTx.getConfidence();
-        }
-        return conf;
+
+        return (null == mostConfidentTx) ? null : mostConfidentTx.getConfidence();
     }
 
     static private int mapConfidenceTypeRating(TransactionConfidence.ConfidenceType type) {
