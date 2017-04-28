@@ -42,33 +42,30 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                         if (args[0].getClass().equals(String.class)) {
                             String room = (String) args[0];
                             socket.join((String) args[0]);
-                            try{
-                                BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String)args[0]));
+                            try {
+                                BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String) args[0]));
                                 String jsonString = buildStateJsonString(bcInvoice.getInvoice(), bcInvoice.getState());
                                 socket.emit("StateChange", jsonString);
 
 
-
-                                jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(),bcInvoice.getPayingTransactions());
+                                jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(), bcInvoice.getPayingTransactions());
                                 socket.emit("PayingTransactionsChange", jsonString);
 
-                                try{
+                                try {
                                     jsonString = buildStateJsonString(bcInvoice.getInvoice(), bcInvoice.getTransferState());
                                     socket.emit("TransferStateChange", jsonString);
-                                    jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(),bcInvoice.getTransferTransactions());
+                                    jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(), bcInvoice.getTransferTransactions());
                                     socket.emit("TransferTransactionsChange", jsonString);
-                                }catch (NoSuchFieldException e){
+                                } catch (NoSuchFieldException e) {
                                     //normal for every tx without transfers
                                 }
 
 
-
-
-                            }catch (NullPointerException e){
+                            } catch (NullPointerException e) {
                                 logger.error("The requested Invoice does not exists. Cannot send any Stateupdate at " +
                                         "this moment...maybe later", e);
-                            } catch (SocketIOException e){
-                                logger.error("Tried to send a first state",e);
+                            } catch (SocketIOException e) {
+                                logger.error("Tried to send a first state", e);
                             }
                             return "OK";
                         }
@@ -104,6 +101,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                     logger.error("SocketIOException in invoiceStateChanged ", e);
                 }
             }
+
             @Override
             public void invoiceTransferStateChanged(Invoice invoice, State state) {
                 try {
@@ -120,18 +118,19 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
             public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
                 try {
                     //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildTransactionsJsonString(invoice,transactions);
+                    String jsonString = buildTransactionsJsonString(invoice, transactions);
                     String roomId = invoice.getInvoiceId().toString();
                     of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
                 } catch (SocketIOException e) {
                     logger.error("SocketIOException in PayingTransactionsChange ", e);
                 }
             }
+
             @Override
             public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
                 try {
                     //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildTransactionsJsonString(invoice,transactions);
+                    String jsonString = buildTransactionsJsonString(invoice, transactions);
                     String roomId = invoice.getInvoiceId().toString();
                     of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
                 } catch (SocketIOException e) {
@@ -148,7 +147,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
     static String buildStateJsonString(Invoice invoice, State state) {
         String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
                 + "\",\"referenceId\":\"" + invoice.getReferenceId()
-                + "\",\"state\":\"" + state.getState() + "\",\"depth\":"+ state.getDepthInBlocks() + "}" ;
+                + "\",\"state\":\"" + state.getState() + "\",\"depth\":" + state.getDepthInBlocks() + "}";
         return jsonString;
     }
 
@@ -158,7 +157,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
         builder.append("{\"invoiceId\":\"");
         builder.append(invoice.getInvoiceId());
         builder.append("\",\"transactions\":[");
-        for (TransactionsInner tx:transactions) {
+        for (TransactionsInner tx : transactions) {
             builder.append("{\"transaction\":\"");
             builder.append(tx.getTransaction());
             builder.append("\",\"state\":{\"state\":\"");

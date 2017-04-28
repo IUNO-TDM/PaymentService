@@ -15,10 +15,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by goergch on 26.04.17.
+ * Handles a set of Transactions. The List can track the Confidence / State.
  */
 public class TransactionList implements TransactionConfidence.Listener {
 
-    Map<Sha256Hash, Transaction> transactions  = new HashMap();
+    Map<Sha256Hash, Transaction> transactions = new HashMap();
     CopyOnWriteArrayList<TransactionListStateListener> listeners = new CopyOnWriteArrayList();
 
     State lastState = null;
@@ -32,46 +33,75 @@ public class TransactionList implements TransactionConfidence.Listener {
     private static final int BUILDING_RATING = 4;
     private static final Logger logger = LoggerFactory.getLogger(TransactionList.class);
 
-    public void add(Transaction transaction){
+
+    /**
+     * Add a transaction to the tracked list. The TransactionList automatically adds itself as a confidence listener
+     * at this transaction
+     * @param transaction
+     */
+    public void add(Transaction transaction) {
         logger.debug("Adding tx %s to TransactionList", transaction.getHashAsString());
-        if(!transactions.containsKey(transaction.getHash())){
-            transactions.put(transaction.getHash(),transaction);
+        if (!transactions.containsKey(transaction.getHash())) {
+            transactions.put(transaction.getHash(), transaction);
             transaction.getConfidence().addEventListener(this);
         }
         logger.debug("This list has now %d transactions", transactions.size());
         informStateListenersTransactionsChanged(getTransactions());
     }
 
-    public void addStateListener(TransactionListStateListener listener){
+
+    public void addStateListener(TransactionListStateListener listener) {
         listeners.add(listener);
     }
 
-    public void removeStateListener(TransactionListStateListener listener){
+    public void removeStateListener(TransactionListStateListener listener) {
         listeners.remove(listener);
     }
 
-    public State getState()
-    {
+    /**
+     * Determines the most confident TransactionConfidence of the transaction in its list
+     * @return The TransactionConfidence as State
+     */
+    public State getState() {
         return mapConfidenceToState(determineMostConfidentTransactionConfidence());
     }
 
-    public boolean isOneOrMoreTxPending(){
-        TransactionConfidence confidence =  determineMostConfidentTransactionConfidence();
+    /**
+     *
+     * @return true if one or more of the transactions in the List have e Confidence Pending or Building
+     */
+    public boolean isOneOrMoreTxPending() {
+        TransactionConfidence confidence = determineMostConfidentTransactionConfidence();
         return (confidence != null && mapConfidenceTypeRating(confidence.getConfidenceType()) >= PENDING_RATING);
     }
 
-    public boolean isOneOrMoreTxConfirmed(int minDepth){
+    /**
+     *
+     * @param minDepth the minimal Block Depth
+     * @return true if one or more of the transactions in the List have e Confidence Building
+     * and have a Block Depth >= minDepth
+     */
+    public boolean isOneOrMoreTxConfirmed(int minDepth) {
         TransactionConfidence confidence = determineMostConfidentTransactionConfidence();
         return (confidence != null && mapConfidenceTypeRating(confidence.getConfidenceType()) >= BUILDING_RATING && minDepth <= confidence.getDepthInBlocks());
     }
 
-    public Transaction getMostConfidentTransaction(){
+    /**
+     *
+     * @return the transaction object with the best TransactinoConfidence
+     */
+    public Transaction getMostConfidentTransaction() {
         return transactions.get(determineMostConfidentTransactionConfidence().getTransactionHash());
     }
 
-    public Transactions getTransactions(){
+
+    /**
+     * A List of Transactions with their state.
+     * @return A Transactions Object as used in the swagger REST api
+     */
+    public Transactions getTransactions() {
         Transactions txes = new Transactions();
-        for (Map.Entry<Sha256Hash,Transaction> element: transactions.entrySet()) {
+        for (Map.Entry<Sha256Hash, Transaction> element : transactions.entrySet()) {
             TransactionsInner transactionsInner = new TransactionsInner();
             transactionsInner.setTransaction(element.getKey().toString());
             transactionsInner.setState(mapConfidenceToState(element.getValue().getConfidence()));
@@ -80,26 +110,26 @@ public class TransactionList implements TransactionConfidence.Listener {
         return txes;
     }
 
-    private TransactionConfidence determineMostConfidentTransactionConfidence(){
+    private TransactionConfidence determineMostConfidentTransactionConfidence() {
         Transaction mostConfidentTx = null;
-        for (Transaction tx :transactions.values()) {
-            if(mostConfidentTx == null){
+        for (Transaction tx : transactions.values()) {
+            if (mostConfidentTx == null) {
                 mostConfidentTx = tx;
-            }else{
+            } else {
                 TransactionConfidence txConfidence = tx.getConfidence();
                 TransactionConfidence mostConfidentTxConfidence = mostConfidentTx.getConfidence();
                 int txRating = mapConfidenceTypeRating(txConfidence.getConfidenceType());
                 int mcTxRating = mapConfidenceTypeRating(mostConfidentTxConfidence.getConfidenceType());
 
-                if(txRating > mcTxRating){
+                if (txRating > mcTxRating) {
                     mostConfidentTx = tx;
-                }else if (txRating == mcTxRating){
-                    if(txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING){
-                        if(txConfidence.numBroadcastPeers() > mostConfidentTxConfidence.numBroadcastPeers()){
+                } else if (txRating == mcTxRating) {
+                    if (txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING) {
+                        if (txConfidence.numBroadcastPeers() > mostConfidentTxConfidence.numBroadcastPeers()) {
                             mostConfidentTx = tx;
                         }
-                    }else if(txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING){
-                        if(txConfidence.getDepthInBlocks() > mostConfidentTxConfidence.getDepthInBlocks()){
+                    } else if (txConfidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
+                        if (txConfidence.getDepthInBlocks() > mostConfidentTxConfidence.getDepthInBlocks()) {
                             mostConfidentTx = tx;
                         }
                     }
@@ -108,15 +138,15 @@ public class TransactionList implements TransactionConfidence.Listener {
             }
         }
         TransactionConfidence conf = null;
-        if(mostConfidentTx != null){
+        if (mostConfidentTx != null) {
             conf = mostConfidentTx.getConfidence();
         }
         return conf;
     }
 
-    static private int mapConfidenceTypeRating(TransactionConfidence.ConfidenceType type){
+    static private int mapConfidenceTypeRating(TransactionConfidence.ConfidenceType type) {
         int rv;
-        switch (type){
+        switch (type) {
             case UNKNOWN:
                 rv = UNKNOWN_RATING;
                 break;
@@ -141,6 +171,7 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     /**
      * This method maps a bitcoin transaction confidence object to an object defined using swagger.
+     *
      * @param confidence a bitcoinj TransactionConfidence object
      * @return confidence state as swagger object
      */
@@ -174,35 +205,35 @@ public class TransactionList implements TransactionConfidence.Listener {
         return result;
     }
 
-    static private boolean statesAreDifferent(State state1, State state2){
+    static private boolean statesAreDifferent(State state1, State state2) {
         boolean rv = false;
-        if(!state1.getState().equals(state2.getState()) || state1.getDepthInBlocks().equals(state2.getDepthInBlocks())){
+        if (!state1.getState().equals(state2.getState()) || state1.getDepthInBlocks().equals(state2.getDepthInBlocks())) {
             rv = true;
         }
         return rv;
     }
 
-    static private boolean transactionsAreDifferent(Transactions transactions1, Transactions transactions2){
+    static private boolean transactionsAreDifferent(Transactions transactions1, Transactions transactions2) {
         boolean rv = false;
-        if(transactions1 == null ^ transactions2 == null){
+        if (transactions1 == null ^ transactions2 == null) {
             rv = true;
-        }else if(transactions1 != null && transactions2 != null){
-            if(transactions1.size() != transactions2.size()){
+        } else if (transactions1 != null && transactions2 != null) {
+            if (transactions1.size() != transactions2.size()) {
                 rv = true;
-            }else{
+            } else {
                 boolean noMatch = false;
-                for (TransactionsInner tx1 :transactions1) {
+                for (TransactionsInner tx1 : transactions1) {
                     noMatch = true;
-                    for (TransactionsInner tx2: transactions2){
-                        if(tx1.getTransaction().equals(tx2.getTransaction())){
-                            if(!statesAreDifferent(tx1.getState(),tx2.getState())){
+                    for (TransactionsInner tx2 : transactions2) {
+                        if (tx1.getTransaction().equals(tx2.getTransaction())) {
+                            if (!statesAreDifferent(tx1.getState(), tx2.getState())) {
                                 noMatch = false;
                                 break;
                             }
                         }
                     }
-                    if(noMatch){
-                        rv=true;
+                    if (noMatch) {
+                        rv = true;
                         break;
                     }
                 }
@@ -211,8 +242,8 @@ public class TransactionList implements TransactionConfidence.Listener {
         return rv;
     }
 
-    protected void cleanup(){
-        for (Transaction tx :transactions.values()) {
+    protected void cleanup() {
+        for (Transaction tx : transactions.values()) {
             tx.getConfidence().removeEventListener(this);
         }
     }
@@ -220,9 +251,9 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     @Override
     protected void finalize() throws Throwable {
-        try{
+        try {
             cleanup();
-        }finally {
+        } finally {
             super.finalize();
         }
 
@@ -239,39 +270,39 @@ public class TransactionList implements TransactionConfidence.Listener {
                 reason.toString()));
 
         boolean refreshNeeded = false;
-        if(lastState == null || lastMostConfidentTxHash == null){
+        if (lastState == null || lastMostConfidentTxHash == null) {
             lastState = mapConfidenceToState(confidence);
             lastMostConfidentTxHash = confidence.getTransactionHash();
             refreshNeeded = true;
-        }else{
-            TransactionConfidence  newMostConfidentConfidence = determineMostConfidentTransactionConfidence();
-            State newState =  mapConfidenceToState(newMostConfidentConfidence);
+        } else {
+            TransactionConfidence newMostConfidentConfidence = determineMostConfidentTransactionConfidence();
+            State newState = mapConfidenceToState(newMostConfidentConfidence);
             Sha256Hash newTxHash = newMostConfidentConfidence.getTransactionHash();
-            if (lastMostConfidentTxHash != newTxHash || statesAreDifferent(lastState,newState)){
+            if (lastMostConfidentTxHash != newTxHash || statesAreDifferent(lastState, newState)) {
                 lastMostConfidentTxHash = newTxHash;
                 lastState = newState;
                 refreshNeeded = true;
             }
         }
-        if(refreshNeeded){
-            informStateListenersMostConfidentState(lastMostConfidentTxHash,lastState);
+        if (refreshNeeded) {
+            informStateListenersMostConfidentState(lastMostConfidentTxHash, lastState);
         }
         Transactions newTransactions = getTransactions();
-        if (transactionsAreDifferent(newTransactions,lastTransactions)){
+        if (transactionsAreDifferent(newTransactions, lastTransactions)) {
             lastTransactions = newTransactions;
             informStateListenersTransactionsChanged(lastTransactions);
         }
 
     }
 
-    private void informStateListenersMostConfidentState( Sha256Hash txHash, State newState){
+    private void informStateListenersMostConfidentState(Sha256Hash txHash, State newState) {
         for (TransactionListStateListener listener : listeners) {
-            listener.mostConfidentTxStateChanged(txHash,newState);
+            listener.mostConfidentTxStateChanged(txHash, newState);
         }
     }
 
 
-    private void informStateListenersTransactionsChanged( Transactions transactions){
+    private void informStateListenersTransactionsChanged(Transactions transactions) {
         for (TransactionListStateListener listener : listeners) {
             listener.transactionsOrStatesChanged(transactions);
         }
