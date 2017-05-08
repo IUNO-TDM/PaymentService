@@ -97,7 +97,7 @@ public class BitcoinInvoice {
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
-            if (bitcoinInvoiceCallbackInterface != null){
+            if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
                 logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
                         invoiceId,
@@ -109,7 +109,7 @@ public class BitcoinInvoice {
 
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null){
+            if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.invoicePayingTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
@@ -121,7 +121,7 @@ public class BitcoinInvoice {
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
-            if (bitcoinInvoiceCallbackInterface != null){
+            if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.invoiceTransferStateChanged(BitcoinInvoice.this, state);
                 logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
                         invoiceId,
@@ -133,7 +133,7 @@ public class BitcoinInvoice {
 
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null){
+            if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.invoiceTransferTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
@@ -147,6 +147,7 @@ public class BitcoinInvoice {
         final ECKey ecKey;
         long value;
         Map<Sha256Hash, Transaction> transactions = null;
+
         Coupon(ECKey ecKey) {
             this.ecKey = ecKey;
         }
@@ -183,6 +184,7 @@ public class BitcoinInvoice {
 
     /**
      * Tries to pay the invoice using coupons.
+     *
      * @return null or signed transaction ready for broadcasting
      */
     Transaction tryPayWithCoupons() {
@@ -199,8 +201,8 @@ public class BitcoinInvoice {
             addTransfersToTx(tx);
             SendRequest sr = SendRequest.forTx(tx);
             sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-            if (balance > (totalAmount + 2*Transaction.MIN_NONDUST_OUTPUT.getValue())) {
-                sr.tx.addOutput(Coin.valueOf(totalAmount-transferAmount), transferAddress);
+            if (balance > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
+                sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
                 sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
             } else {
                 sr.changeAddress = transferAddress;
@@ -211,7 +213,7 @@ public class BitcoinInvoice {
                 couponWallet.commitTx(sr.tx);
                 result = sr.tx;
                 incomingTxList.add(sr.tx);
-                if(!transfers.isEmpty())transferTxList.add(sr.tx);
+                if (!transfers.isEmpty()) transferTxList.add(sr.tx);
             } catch (InsufficientMoneyException e) { // should never happen
                 e.printStackTrace();
             }
@@ -306,8 +308,9 @@ public class BitcoinInvoice {
 
     /**
      * This constructor checks a new invoice for sanity.
-     * @param id unique id of invoice object
-     * @param inv invoice as defined in restful api
+     *
+     * @param id   unique id of invoice object
+     * @param inv  invoice as defined in restful api
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
@@ -354,6 +357,7 @@ public class BitcoinInvoice {
 
     /**
      * Returns the invoice data.
+     *
      * @return invoice data
      */
     public Invoice getInvoice() {
@@ -369,6 +373,7 @@ public class BitcoinInvoice {
 
     /**
      * Checks if the invoice is expired.
+     *
      * @return true if invoice is expired
      */
     boolean isExpired() {
@@ -377,6 +382,7 @@ public class BitcoinInvoice {
 
     /**
      * Returns a BIP21 payment request string.
+     *
      * @return BIP21 payment request string
      */
     String getBip21URI() {
@@ -386,6 +392,7 @@ public class BitcoinInvoice {
     /**
      * Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
      * The address value pair of the own wallet is added to the transfers as well.
+     *
      * @return the address value/pairs to fulfill the invoice as array
      */
     List<AddressValuePair> getTransfers() {
@@ -403,18 +410,18 @@ public class BitcoinInvoice {
     }
 
     State getTransferState() throws NoSuchFieldException {
-        if(transfers.isEmpty()){
+        if (transfers.isEmpty()) {
             throw new NoSuchFieldException("TransactionState not applicable. No transfers for this invoice.");
         }
         return transferTxList.getState();
     }
 
-    Transactions getPayingTransactions(){
+    Transactions getPayingTransactions() {
         return incomingTxList.getTransactions();
     }
 
-    Transactions getTransferTransactions() throws NoSuchFieldException{
-        if(transfers.isEmpty()){
+    Transactions getTransferTransactions() throws NoSuchFieldException {
+        if (transfers.isEmpty()) {
             throw new NoSuchFieldException("getTransferTransactions not applicable. No transfers for this invoice.");
         }
         return transferTxList.getTransactions();
@@ -422,6 +429,7 @@ public class BitcoinInvoice {
 
     /**
      * Get all spendable outputs of the incoming transaction and return them as set of transaction inputs.
+     *
      * @return set of TransactionInput
      */
     private Set<TransactionInput> getInputs() {
@@ -444,10 +452,11 @@ public class BitcoinInvoice {
 
     /**
      * This method tries to finish the invoice by creating a send request that pays the transfer payments.
+     *
      * @return SendRequest object or null
      */
     SendRequest tryFinishInvoice() {
-        if(transfers.isEmpty()){
+        if (transfers.isEmpty()) {
             logger.warn(String.format("Invoice %s has no transfers.", invoiceId.toString()));
             return null;
         }
@@ -487,12 +496,12 @@ public class BitcoinInvoice {
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
         boolean result = true;
 
-        if (( ! foo.keySet().contains(transferAddress)) // own wallet must be paid
-                || (totalAmount-transferAmount) > foo.get(transferAddress).getValue()) {
+        if ((!foo.keySet().contains(transferAddress)) // own wallet must be paid
+                || (totalAmount - transferAmount) > foo.get(transferAddress).getValue()) {
             result = false;
         } else {
             for (TransferPair pa : transfers) { // all transfers must be paid as well
-                if ( ! (foo.keySet().contains(pa.address))
+                if (!(foo.keySet().contains(pa.address))
                         || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
                     result = false;
                     break;
@@ -505,6 +514,7 @@ public class BitcoinInvoice {
 
     /**
      * Checks all outputs of a transaction for payments to this invoice.
+     *
      * @param tx new transaction with outputs to be checked
      */
     public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
@@ -524,7 +534,7 @@ public class BitcoinInvoice {
             logger.info("Received transfer payment for invoice " + invoiceId.toString()
                     + " to " + transferAddress);
             incomingTxList.add(tx);
-            if(!transfers.isEmpty())transferTxList.add(tx);
+            if (!transfers.isEmpty()) transferTxList.add(tx);
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
