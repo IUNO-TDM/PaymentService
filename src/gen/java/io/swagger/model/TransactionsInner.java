@@ -24,31 +24,31 @@ import javax.validation.constraints.*;
 /**
  * TransactionsInner
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
 public class TransactionsInner   {
-  @JsonProperty("transaction")
-  private String transaction = null;
+  @JsonProperty("transactionId")
+  private String transactionId = null;
 
   @JsonProperty("state")
   private State state = null;
 
-  public TransactionsInner transaction(String transaction) {
-    this.transaction = transaction;
+  public TransactionsInner transactionId(String transactionId) {
+    this.transactionId = transactionId;
     return this;
   }
 
    /**
-   * tx hash
-   * @return transaction
+   * txid
+   * @return transactionId
   **/
-  @JsonProperty("transaction")
-  @ApiModelProperty(value = "tx hash")
-  public String getTransaction() {
-    return transaction;
+  @JsonProperty("transactionId")
+  @ApiModelProperty(value = "txid")
+  public String getTransactionId() {
+    return transactionId;
   }
 
-  public void setTransaction(String transaction) {
-    this.transaction = transaction;
+  public void setTransactionId(String transactionId) {
+    this.transactionId = transactionId;
   }
 
   public TransactionsInner state(State state) {
@@ -80,13 +80,13 @@ public class TransactionsInner   {
       return false;
     }
     TransactionsInner transactionsInner = (TransactionsInner) o;
-    return Objects.equals(this.transaction, transactionsInner.transaction) &&
+    return Objects.equals(this.transactionId, transactionsInner.transactionId) &&
         Objects.equals(this.state, transactionsInner.state);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(transaction, state);
+    return Objects.hash(transactionId, state);
   }
 
 
@@ -95,7 +95,7 @@ public class TransactionsInner   {
     StringBuilder sb = new StringBuilder();
     sb.append("class TransactionsInner {\n");
     
-    sb.append("    transaction: ").append(toIndentedString(transaction)).append("\n");
+    sb.append("    transactionId: ").append(toIndentedString(transactionId)).append("\n");
     sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("}");
     return sb.toString();

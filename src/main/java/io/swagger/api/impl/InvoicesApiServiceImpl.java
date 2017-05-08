@@ -29,7 +29,7 @@ import iuno.tdm.paymentservice.Bitcoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 

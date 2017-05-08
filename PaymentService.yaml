@@ -165,7 +165,7 @@ paths:
             
   /invoices/{invoiceId}/payingTransactions:
     get:
-      summary: Returns all transaction that are paying this PaymentService
+      summary: Returns all transaction that are paying this invoice
       operationId: getInvoicePayingTransactions
       parameters:
         - name: invoiceId
@@ -397,9 +397,9 @@ definitions:
     items:
       type: object
       properties:
-        transaction:
+        transactionId:
           type: string
-          description: tx hash
+          description: txid
         state:
           $ref: '#/definitions/State'
           

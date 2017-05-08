@@ -103,7 +103,7 @@ public class TransactionList implements TransactionConfidence.Listener {
         Transactions txes = new Transactions();
         for (Map.Entry<Sha256Hash, Transaction> element : transactions.entrySet()) {
             TransactionsInner transactionsInner = new TransactionsInner();
-            transactionsInner.setTransaction(element.getKey().toString());
+            transactionsInner.setTransactionId(element.getKey().toString());
             transactionsInner.setState(mapConfidenceToState(element.getValue().getConfidence()));
             txes.add(transactionsInner);
         }
@@ -225,7 +225,7 @@ public class TransactionList implements TransactionConfidence.Listener {
                 for (TransactionsInner tx1 : transactions1) {
                     noMatch = true;
                     for (TransactionsInner tx2 : transactions2) {
-                        if (tx1.getTransaction().equals(tx2.getTransaction())) {
+                        if (tx1.getTransactionId().equals(tx2.getTransactionId())) {
                             if (!statesAreDifferent(tx1.getState(), tx2.getState())) {
                                 noMatch = false;
                                 break;

@@ -165,7 +165,7 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
                 builder.append(',');
             }
             builder.append("{\"transaction\":\"");
-            builder.append(tx.getTransaction());
+            builder.append(tx.getTransactionId());
             builder.append("\",\"state\":{\"state\":\"");
             builder.append(tx.getState().getState());
             builder.append("\",\"depthInBlocks\":");

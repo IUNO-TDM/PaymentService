@@ -33,7 +33,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-27T06:35:13.356Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
 
@@ -149,7 +149,7 @@ public class InvoicesApi  {
     @Path("/{invoiceId}/payingTransactions")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
-    @io.swagger.annotations.ApiOperation(value = "Returns all transaction that are paying this PaymentService", notes = "", response = Transactions.class, tags={  })
+    @io.swagger.annotations.ApiOperation(value = "Returns all transaction that are paying this invoice", notes = "", response = Transactions.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = Transactions.class),
         
