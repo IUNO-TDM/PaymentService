@@ -10,6 +10,7 @@ import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
 import java.util.UUID;
 
 import java.util.List;
@@ -20,7 +21,7 @@ import java.io.InputStream;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 import javax.validation.constraints.*;
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-25T12:13:44.677Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
 public abstract class InvoicesApiService {
     public abstract Response addCouponToInvoice(UUID invoiceId,Coupon coupon,SecurityContext securityContext) throws NotFoundException;
     public abstract Response addInvoice(Invoice invoice,SecurityContext securityContext) throws NotFoundException;
@@ -29,8 +30,10 @@ public abstract class InvoicesApiService {
     public abstract Response getInvoiceById(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceCouponBalance(UUID invoiceId,String couponAddress,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceCoupons(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
+    public abstract Response getInvoicePayingTransactions(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceState(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceTransferState(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
+    public abstract Response getInvoiceTransferTransactions(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoiceTransfers(UUID invoiceId,SecurityContext securityContext) throws NotFoundException;
     public abstract Response getInvoices(SecurityContext securityContext) throws NotFoundException;
 }

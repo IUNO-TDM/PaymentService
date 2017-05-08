@@ -14,39 +14,16 @@
 package io.swagger.model;
 
 import java.util.Objects;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import io.swagger.annotations.ApiModel;
-import io.swagger.annotations.ApiModelProperty;
+import io.swagger.model.TransactionsInner;
+import java.util.ArrayList;
+import java.util.List;
 import javax.validation.constraints.*;
 
 /**
- * Error
+ * Transactions
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
-public class Error   {
-  @JsonProperty("message")
-  private String message = null;
-
-  public Error message(String message) {
-    this.message = message;
-    return this;
-  }
-
-   /**
-   * meaningful error message
-   * @return message
-  **/
-  @JsonProperty("message")
-  @ApiModelProperty(value = "meaningful error message")
-  public String getMessage() {
-    return message;
-  }
-
-  public void setMessage(String message) {
-    this.message = message;
-  }
-
+public class Transactions extends ArrayList<TransactionsInner>  {
 
   @Override
   public boolean equals(java.lang.Object o) {
@@ -56,22 +33,20 @@ public class Error   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Error error = (Error) o;
-    return Objects.equals(this.message, error.message);
+    return true;
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(message);
+    return Objects.hash(super.hashCode());
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Error {\n");
-    
-    sb.append("    message: ").append(toIndentedString(message)).append("\n");
+    sb.append("class Transactions {\n");
+    sb.append("    ").append(toIndentedString(super.toString())).append("\n");
     sb.append("}");
     return sb.toString();
   }

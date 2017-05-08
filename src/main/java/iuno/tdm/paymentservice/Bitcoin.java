@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.Futures;
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.crypto.MnemonicCode;
@@ -43,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.validation.constraints.Null;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -248,6 +250,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getTransferState();
     }
 
+    public Transactions getInvoicePaymentTransactions(UUID id) throws NullPointerException {
+        return invoiceHashMap.get(id).getPayingTransactions();
+    }
+
+    public Transactions getInvoiceTransferTransactions(UUID id) throws NullPointerException, NoSuchFieldException {
+        return invoiceHashMap.get(id).getTransferTransactions();
+    }
+
+
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         Wallet couponWallet = bcInvoice.getCouponWallet();
@@ -292,6 +303,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         HashMap<Address, Coin> addressCoinHashMap = new HashMap<>();
         for (TransactionOutput txout : tx.getOutputs()) {
             Address addr = txout.getAddressFromP2PKHScript(context.getParams());
+            if(addr == null) addr = txout.getAddressFromP2SH(context.getParams());
             Coin value = txout.getValue();
             if (null != addr) {
                 if (! addressCoinHashMap.containsKey(addr)) {
@@ -360,6 +372,18 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     }
 
+    public void sendPayingTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
+        for (BitcoinCallbackInterface client:callbackClients) {
+            client.invoicePayingTransactionsChanged(invoice, transactions);
+        }
+    }
+
+    public void sendTransferTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
+        for (BitcoinCallbackInterface client:callbackClients) {
+            client.invoiceTransferTransactionsChanged(invoice, transactions);
+        }
+    }
+
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
         sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
@@ -368,5 +392,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     @Override
     public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
         sendInvoiceTransferStateChangeToCallbackClients(invoice.getInvoice(),state);
+    }
+
+    @Override
+    public void invoicePayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
+        sendPayingTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
+    }
+
+    @Override
+    public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
+        sendTransferTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
     }
 }
