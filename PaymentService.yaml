@@ -117,6 +117,30 @@ paths:
           schema:
             type: string
 
+  /invoices/{invoiceId}/paymentInformation:
+    get:
+      summary: Returns an object, how the invoice can be paid (without the internal transfers) via PaymentChannel or Bitcoin
+      operationId: getPaymentInformation 
+      parameters:
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the invoice id to get the state for
+      responses:
+        404:
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        200:
+          description: returns the paymentInformation object
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PaymentInformation'
+    
+
   /invoices/{invoiceId}/state:
     get:
       summary: Returns a confidence object that describes the state of the incoming tx.
@@ -322,8 +346,54 @@ paths:
           description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
+            
+  /paymentChannels:
+    get:
+      summary: Returns all known paymentChannels
+      operationId: getPaymentChannels 
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PaymentChannel'
+            
+          
+  /paymentChannels/{pubKey}:
+    get:
+      summary: Returns all known paymentChannels filtered by pubKey
+      operationId: getPaymentChannelsByPubkey
+      parameters:
+      - name: pubKey
+        in: path
+        type: string
+        required: true
+        description: the id of the invoice to get the coupons balance for
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/PaymentChannel'
+    
 
 definitions:
+  PaymentChannel:
+    type: object
+    properties:
+      ownPubKey:
+        type: string
+      foreignPubKey:
+        type: string
+      capacity:
+        type: integer
+        format: int64
+      ownCredit:
+        type: integer
+        format: int64
+
   AddressValuePair:
     type: object
     properties:
@@ -334,6 +404,23 @@ definitions:
         type: integer
         format: int64
         description: value in Satoshis
+        
+  PaymentInformation:
+    type: object
+    properties:
+      coin:
+        type: integer
+        format: int64
+        description: value in Satoshis
+      bitcoinAddress:
+        type: string
+        description: Bitcoin Base58 encoded public key hash address
+      pcPubKey:
+        type: string
+        description: the paymentChannelPubkey to pay to alternatively
+      pcInvoiceId:
+        type: string
+        description: the given invoice id from the receiver to mention in the micropayment
 
   Invoice:
     type: object
@@ -350,7 +437,7 @@ definitions:
         type: array
         description: array of all transfer outputs with their values
         items:
-          $ref: '#/definitions/AddressValuePair'
+          $ref: '#/definitions/PaymentInformation'
       invoiceId:
         type: string
         format: uuid
@@ -373,6 +460,7 @@ definitions:
         - dead
         - unknown
         - conflict
+        - micropaymentreceived
       depthInBlocks:
         type: integer
         format: int32
