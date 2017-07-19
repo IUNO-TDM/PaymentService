@@ -18,7 +18,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
-import io.swagger.model.AddressValuePair;
+import io.swagger.model.PaymentInformation;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -28,7 +28,7 @@ import javax.validation.constraints.*;
 /**
  * Invoice
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class Invoice   {
   @JsonProperty("totalAmount")
   private Long totalAmount = null;
@@ -37,7 +37,7 @@ public class Invoice   {
   private Date expiration = null;
 
   @JsonProperty("transfers")
-  private List<AddressValuePair> transfers = new ArrayList<AddressValuePair>();
+  private List<PaymentInformation> transfers = null;
 
   @JsonProperty("invoiceId")
   private UUID invoiceId = null;
@@ -50,10 +50,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * total amount of Satoshis that are requested to be paid
    * @return totalAmount
-  **/
+   **/
   @JsonProperty("totalAmount")
   @ApiModelProperty(value = "total amount of Satoshis that are requested to be paid")
   public Long getTotalAmount() {
@@ -69,10 +69,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * date after which this invoice is no longer valid
    * @return expiration
-  **/
+   **/
   @JsonProperty("expiration")
   @ApiModelProperty(value = "date after which this invoice is no longer valid")
   public Date getExpiration() {
@@ -83,27 +83,30 @@ public class Invoice   {
     this.expiration = expiration;
   }
 
-  public Invoice transfers(List<AddressValuePair> transfers) {
+  public Invoice transfers(List<PaymentInformation> transfers) {
     this.transfers = transfers;
     return this;
   }
 
-  public Invoice addTransfersItem(AddressValuePair transfersItem) {
+  public Invoice addTransfersItem(PaymentInformation transfersItem) {
+    if (this.transfers == null) {
+      this.transfers = new ArrayList<PaymentInformation>();
+    }
     this.transfers.add(transfersItem);
     return this;
   }
 
-   /**
+  /**
    * array of all transfer outputs with their values
    * @return transfers
-  **/
+   **/
   @JsonProperty("transfers")
   @ApiModelProperty(value = "array of all transfer outputs with their values")
-  public List<AddressValuePair> getTransfers() {
+  public List<PaymentInformation> getTransfers() {
     return transfers;
   }
 
-  public void setTransfers(List<AddressValuePair> transfers) {
+  public void setTransfers(List<PaymentInformation> transfers) {
     this.transfers = transfers;
   }
 
@@ -112,10 +115,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * unique id of the invoice assigned by payment service
    * @return invoiceId
-  **/
+   **/
   @JsonProperty("invoiceId")
   @ApiModelProperty(value = "unique id of the invoice assigned by payment service")
   public UUID getInvoiceId() {
@@ -131,10 +134,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service
    * @return referenceId
-  **/
+   **/
   @JsonProperty("referenceId")
   @ApiModelProperty(value = "id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service")
   public String getReferenceId() {

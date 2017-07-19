@@ -19,24 +19,21 @@
 package iuno.tdm.paymentservice;
 
 import ch.qos.logback.classic.Level;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import io.swagger.model.AddressValuePair;
-import io.swagger.model.Invoice;
-import io.swagger.model.State;
-import io.swagger.model.Transactions;
+import io.swagger.model.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.net.discovery.DnsDiscovery;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.protocols.channels.StoredPaymentChannelClientStates;
+import org.bitcoinj.protocols.channels.StoredPaymentChannelServerStates;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.SPVBlockStore;
 import org.bitcoinj.utils.BriefLogFormatter;
-import org.bitcoinj.wallet.DeterministicSeed;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.*;
 import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.joda.time.DateTime;
@@ -112,15 +109,23 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         try {
             if (walletFile.exists()) {
                 filename = walletFile.toString();
-                wallet = Wallet.loadFromFile(walletFile);
+                wallet = Wallet.loadFromFile(
+                        walletFile,
+                        new StoredPaymentChannelServerStates(null),
+                        new StoredPaymentChannelClientStates(null));
 
             } else {
                 if (backupFile.exists()) {
                     filename = backupFile.toString();
-                    wallet = Wallet.loadFromFile(backupFile);
+                    wallet = Wallet.loadFromFile(
+                            backupFile,
+                            new StoredPaymentChannelServerStates(null),
+                            new StoredPaymentChannelClientStates(null));
 
                 } else {
                     wallet = new Wallet(context);
+                    wallet.addExtension(new StoredPaymentChannelServerStates(null));
+                    wallet.addExtension(new StoredPaymentChannelClientStates(null));
                 }
                 chainFile.delete();
             }
@@ -274,6 +279,12 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.keySet();
     }
 
+
+    public PaymentInformation getInvoicePaymentInformation(UUID id) {
+        return invoiceHashMap.get(id).getPaymentInformation();
+
+    }
+
     /**
      * Removes all expired invoices.
      */
@@ -403,4 +414,5 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
         sendTransferTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
     }
+
 }

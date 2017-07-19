@@ -19,10 +19,7 @@ package iuno.tdm.paymentservice;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.io.BaseEncoding;
-import io.swagger.model.AddressValuePair;
-import io.swagger.model.Invoice;
-import io.swagger.model.State;
-import io.swagger.model.Transactions;
+import io.swagger.model.*;
 import org.bitcoinj.core.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
@@ -74,17 +71,37 @@ public class BitcoinInvoice {
 
     private TransactionList transferTxList = new TransactionList();
 
-    class TransferPair {
-        final Address address;
-        final Coin targetValue;
+    public io.swagger.model.PaymentInformation getPaymentInformation() {
+        return new io.swagger.model.PaymentInformation()
+                .pcPubKey("")
+                .pcInvoiceId("")
+                .coin(totalAmount)
+                .bitcoinAddress(receiveAddress.toBase58());
+    }
 
-        TransferPair(Address a, Coin target) {
-            address = a;
-            targetValue = target;
+    class PaymentInformation {
+        final Address bitcoinAddress;
+        final Coin targetValue;
+        final String pcPubKey;
+        final String pcIncoiceId;
+
+        public PaymentInformation(Address bitcoinAddress, Coin targetValue, String pcPubKey, String pcIncoiceId) {
+            this.bitcoinAddress = bitcoinAddress;
+            this.targetValue = targetValue;
+            this.pcPubKey = pcPubKey;
+            this.pcIncoiceId = pcIncoiceId;
         }
 
-        AddressValuePair getAddressValuePair() {
-            return new AddressValuePair().address(address.toBase58()).coin(targetValue.getValue());
+        io.swagger.model.PaymentInformation getPaymentInformation() {
+            return new io.swagger.model.PaymentInformation()
+                    .bitcoinAddress(bitcoinAddress.toBase58())
+                    .coin(targetValue.getValue())
+                    .pcInvoiceId(pcIncoiceId)
+                    .pcPubKey(pcPubKey);
+        }
+
+        AddressValuePair getAddressValuePair(){
+            return new AddressValuePair().address(bitcoinAddress.toBase58()).coin(targetValue.getValue());
         }
     }
 
@@ -92,7 +109,7 @@ public class BitcoinInvoice {
      * This member contains all address value pairs for transfer payments.
      * It does not contain any payments to the payment services own wallet.
      */
-    private List<TransferPair> transfers = new Vector<>();
+    private List<PaymentInformation> transfers = new Vector<>();
 
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
@@ -324,13 +341,13 @@ public class BitcoinInvoice {
             throw new IllegalArgumentException("invoice amount is less than bitcoin minimum dust output");
 
         // check values (transfer shall be lower than totalamount)
-        for (AddressValuePair avp : inv.getTransfers()) {
-            Address a = Address.fromBase58(params, avp.getAddress());
-            long value = avp.getCoin();
+        for (io.swagger.model.PaymentInformation paymentInformation : inv.getTransfers()) {
+            Address a = Address.fromBase58(params, paymentInformation.getBitcoinAddress());
+            long value = paymentInformation.getCoin();
             if (value < Transaction.MIN_NONDUST_OUTPUT.getValue())
-                throw new IllegalArgumentException("transfer amount to " + avp.getAddress() + " is less than bitcoin minimum dust output");
+                throw new IllegalArgumentException("transfer amount to " + paymentInformation.getBitcoinAddress() + " is less than bitcoin minimum dust output");
             transferAmount += value;
-            transfers.add(new TransferPair(a, Coin.valueOf(value)));
+            transfers.add(new PaymentInformation(a, Coin.valueOf(value),paymentInformation.getPcPubKey(),paymentInformation.getPcInvoiceId()));
         }
         if (totalAmount < (transferAmount + Transaction.MIN_NONDUST_OUTPUT.getValue()))
             throw new IllegalArgumentException("total invoice amount minus sum of transfer amounts is dust");
@@ -366,8 +383,8 @@ public class BitcoinInvoice {
                 .expiration(expiration)
                 .invoiceId(invoiceId)
                 .referenceId(referenceId);
-        for (TransferPair pa : transfers)
-            result.addTransfersItem(pa.getAddressValuePair());
+        for (PaymentInformation pa : transfers)
+            result.addTransfersItem(pa.getPaymentInformation());
         return result;
     }
 
@@ -397,7 +414,7 @@ public class BitcoinInvoice {
      */
     List<AddressValuePair> getTransfers() {
         List<AddressValuePair> avpList = new Vector<>();
-        for (TransferPair pa : transfers)
+        for (PaymentInformation pa : transfers)
             avpList.add(pa.getAddressValuePair());
 
         long difference = totalAmount - transferAmount;
@@ -488,8 +505,8 @@ public class BitcoinInvoice {
 
     private void addTransfersToTx(Transaction tx) {
         // add transfer outputs
-        for (TransferPair pa : transfers) {
-            tx.addOutput(pa.targetValue, pa.address);
+        for (PaymentInformation pa : transfers) {
+            tx.addOutput(pa.targetValue, pa.bitcoinAddress);
         }
     }
 
@@ -500,9 +517,9 @@ public class BitcoinInvoice {
                 || (totalAmount - transferAmount) > foo.get(transferAddress).getValue()) {
             result = false;
         } else {
-            for (TransferPair pa : transfers) { // all transfers must be paid as well
-                if (!(foo.keySet().contains(pa.address))
-                        || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
+            for (PaymentInformation pa : transfers) { // all transfers must be paid as well
+                if (!(foo.keySet().contains(pa.bitcoinAddress))
+                        || (pa.targetValue.isGreaterThan(foo.get(pa.bitcoinAddress)))) {
                     result = false;
                     break;
                 }

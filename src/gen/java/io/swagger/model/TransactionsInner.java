@@ -24,7 +24,7 @@ import javax.validation.constraints.*;
 /**
  * TransactionsInner
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class TransactionsInner   {
   @JsonProperty("transactionId")
   private String transactionId = null;
@@ -37,10 +37,10 @@ public class TransactionsInner   {
     return this;
   }
 
-   /**
+  /**
    * txid
    * @return transactionId
-  **/
+   **/
   @JsonProperty("transactionId")
   @ApiModelProperty(value = "txid")
   public String getTransactionId() {
@@ -56,10 +56,10 @@ public class TransactionsInner   {
     return this;
   }
 
-   /**
+  /**
    * Get state
    * @return state
-  **/
+   **/
   @JsonProperty("state")
   @ApiModelProperty(value = "")
   public State getState() {

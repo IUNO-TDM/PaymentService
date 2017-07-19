@@ -25,7 +25,7 @@ import javax.validation.constraints.*;
  * invoice confidence state
  */
 @ApiModel(description = "invoice confidence state")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class State   {
   /**
    * confidence state
@@ -39,7 +39,9 @@ public class State   {
     
     UNKNOWN("unknown"),
     
-    CONFLICT("conflict");
+    CONFLICT("conflict"),
+    
+    MICROPAYMENTRECEIVED("micropaymentreceived");
 
     private String value;
 
@@ -75,10 +77,10 @@ public class State   {
     return this;
   }
 
-   /**
+  /**
    * confidence state
    * @return state
-  **/
+   **/
   @JsonProperty("state")
   @ApiModelProperty(value = "confidence state")
   public StateEnum getState() {
@@ -94,10 +96,10 @@ public class State   {
     return this;
   }
 
-   /**
+  /**
    * depth of a building transaction in blocks
    * @return depthInBlocks
-  **/
+   **/
   @JsonProperty("depthInBlocks")
   @ApiModelProperty(value = "depth of a building transaction in blocks")
   public Integer getDepthInBlocks() {

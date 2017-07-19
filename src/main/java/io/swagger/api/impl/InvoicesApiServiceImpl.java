@@ -7,6 +7,7 @@ import io.swagger.model.AddressValuePair;
 import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
+import io.swagger.model.PaymentInformation;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 
@@ -29,7 +30,7 @@ import iuno.tdm.paymentservice.Bitcoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 
@@ -242,5 +243,22 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         Set<UUID> invoiceIds = Bitcoin.getInstance().getInvoiceIds();
         logger.info(String.format("00000000-0000-0000-0000-000000000000 (200) getInvoices"));
         return Response.ok().entity(invoiceIds).build();
+    }
+    @Override
+    public Response getPaymentInformation(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        try {
+
+            PaymentInformation paymentInformation = Bitcoin.getInstance().getInvoicePaymentInformation(invoiceId);
+            resp = Response.ok().entity(paymentInformation).build();
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            resp = Response.status(404).entity(err).build();
+        }
+        logger.info(String.format("%s (%03d) getInvoiceTransfers: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
     }
 }

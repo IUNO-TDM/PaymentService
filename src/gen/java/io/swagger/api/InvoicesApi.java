@@ -11,6 +11,7 @@ import io.swagger.model.AddressValuePair;
 import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
+import io.swagger.model.PaymentInformation;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import java.util.UUID;
@@ -23,6 +24,7 @@ import java.io.InputStream;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import javax.servlet.ServletConfig;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -33,9 +35,30 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class InvoicesApi  {
-   private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
+   private final InvoicesApiService delegate;
+
+   public InvoicesApi(@Context ServletConfig servletContext) {
+      InvoicesApiService delegate = null;
+
+      if (servletContext != null) {
+         String implClass = servletContext.getInitParameter("InvoicesApi.implementation");
+         if (implClass != null && !"".equals(implClass.trim())) {
+            try {
+               delegate = (InvoicesApiService) Class.forName(implClass).newInstance();
+            } catch (Exception e) {
+               throw new RuntimeException(e);
+            }
+         } 
+      }
+
+      if (delegate == null) {
+         delegate = InvoicesApiServiceFactory.getInvoicesApi();
+      }
+
+      this.delegate = delegate;
+   }
 
     @POST
     @Path("/{invoiceId}/coupons")
@@ -229,5 +252,19 @@ public class InvoicesApi  {
     public Response getInvoices(@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.getInvoices(securityContext);
+    }
+    @GET
+    @Path("/{invoiceId}/paymentInformation")
+    @Consumes({ "application/json" })
+    @Produces({ "application/json", "text/plain" })
+    @io.swagger.annotations.ApiOperation(value = "Returns an object, how the invoice can be paid (without the internal transfers) via PaymentChannel or Bitcoin", notes = "", response = PaymentInformation.class, responseContainer = "List", tags={  })
+    @io.swagger.annotations.ApiResponses(value = { 
+        @io.swagger.annotations.ApiResponse(code = 200, message = "returns the paymentInformation object", response = PaymentInformation.class, responseContainer = "List"),
+        
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = PaymentInformation.class, responseContainer = "List") })
+    public Response getPaymentInformation(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
+,@Context SecurityContext securityContext)
+    throws NotFoundException {
+        return delegate.getPaymentInformation(invoiceId,securityContext);
     }
 }

@@ -23,7 +23,7 @@ import javax.validation.constraints.*;
 /**
  * Coupon
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-07-18T06:51:44.758Z")
 public class Coupon   {
   @JsonProperty("coupon")
   private String coupon = null;
@@ -33,10 +33,10 @@ public class Coupon   {
     return this;
   }
 
-   /**
+  /**
    * bip38 encoded bitcoin private key
    * @return coupon
-  **/
+   **/
   @JsonProperty("coupon")
   @ApiModelProperty(value = "bip38 encoded bitcoin private key")
   public String getCoupon() {
