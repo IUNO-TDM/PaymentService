@@ -36,7 +36,7 @@ public class IrcClient extends ListenerAdapter implements IrcClientInterface{
     }
 
     public void sendMessage(String message){
-
+        botX.send().message(ircRoomName,message);
     }
 
     @Override

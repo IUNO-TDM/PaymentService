@@ -23,16 +23,16 @@ import java.util.UUID;
 public class PaymentChannelServer implements IrcClientCallbackInterface {
 
     private final PcIrcMessageRegistry messageRegistry;
-    TransactionBroadcaster broadcaster;
-    String ownPubkey;
-    String foreignPubkey;
-    ECKey serverKey;
-    Wallet wallet;
-    PaymentChannelServerCallbackInterface callbackInterface;
-    IrcClientInterface ircClientInterface;
+    private TransactionBroadcaster broadcaster;
+    private String ownPubkey;
+    private String foreignPubkey;
+    private ECKey serverKey;
+    private Wallet wallet;
+    private PaymentChannelServerCallbackInterface callbackInterface;
+    private IrcClientInterface ircClientInterface;
     private int dataToBeReceived = 0;
     private StringBuilder builder;
-    org.bitcoinj.protocols.channels.PaymentChannelServer paymentChannelManager;
+    private org.bitcoinj.protocols.channels.PaymentChannelServer paymentChannelManager;
     private PaymentChannelCloseException.CloseReason closeReason;
     private Coin balance = Coin.valueOf(0);
 
@@ -90,7 +90,11 @@ public class PaymentChannelServer implements IrcClientCallbackInterface {
                     @Override
                     public ListenableFuture<ByteString> paymentIncrease(Coin by, Coin to, @Nullable ByteString info) {
                         balance = to;
-                        callbackInterface.receivedPayment(PaymentChannelServer.this,by,info.toString());
+                        String invoiceId = "";
+                        if(info != null){
+                            invoiceId = info.toString();
+                        }
+                        callbackInterface.receivedPayment(PaymentChannelServer.this,by,invoiceId);
                         return null;
                     }
                 });
@@ -157,7 +161,7 @@ public class PaymentChannelServer implements IrcClientCallbackInterface {
         }
     }
     public Coin getChannelBalance(String pubKey) {
-        return balance;
+        return paymentChannelManager.state().getFeePaid();
     }
 
     public synchronized void connectionOpen(String challenge) {

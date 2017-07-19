@@ -7,6 +7,5 @@ import org.bitcoinj.core.Coin;
  */
 public interface PaymentChannelClientCallbackInterface {
     void channelOpen(PaymentChannelClient client);
-    void receivedPayment(PaymentChannelClient client, Coin amount, String invoiceId);
     void channelClosed(PaymentChannelClient client);
 }

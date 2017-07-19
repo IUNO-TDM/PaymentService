@@ -22,7 +22,9 @@ import ch.qos.logback.classic.Level;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
+import com.subgraph.orchid.encoders.Hex;
 import io.swagger.model.*;
+import iuno.tdm.paymentservice.paymentchannel.PaymentChannel;
 import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.crypto.MnemonicCode;
@@ -41,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -69,6 +70,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private static Bitcoin instance;
     private Context context;
+
+    private iuno.tdm.paymentservice.paymentchannel.PaymentChannel paymentChannel;
 
     private Bitcoin() {
         BriefLogFormatter.initWithSilentBitcoinJ();
@@ -182,6 +185,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
                         logger.info("peer group finished starting");
                         peerGroup.connectTo(new InetSocketAddress("tdm-payment.axoom.cloud", 18333)); // TODO make this configurable
                         peerGroup.startBlockChainDownload(new DownloadProgressTracker());
+
+                        paymentChannel = new PaymentChannel(wallet,peerGroup);
+                        paymentChannel.addReceivingKey(ECKey.fromPrivate(Hex.decode("3d79a9edc14b65c5059cf14eefc5e66cd1ad6d845f1f7dbe8ff2fc2141667090")));
                     }
 
                     @Override
@@ -190,6 +196,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
                     }
                 }
         );
+
     }
 
     public void stop() {
