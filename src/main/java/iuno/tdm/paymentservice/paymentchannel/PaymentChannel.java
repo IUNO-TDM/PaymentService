@@ -18,7 +18,12 @@ import java.util.UUID;
 /**
  * Created by goergch on 18.07.17.
  */
-public class PaymentChannel implements IrcClientCallbackInterface, IrcClientInterface, PaymentChannelServerCallbackInterface,PaymentChannelClientCallbackInterface{
+public class PaymentChannel implements
+        IrcClientCallbackInterface,
+        IrcClientInterface,
+        PaymentChannelServerCallbackInterface,
+        PaymentChannelClientCallbackInterface,
+        PaymentChannelInterface{
 
     Wallet wallet;
     TransactionBroadcaster broadcaster;
@@ -34,7 +39,6 @@ public class PaymentChannel implements IrcClientCallbackInterface, IrcClientInte
         this.wallet = wallet;
         this.broadcaster = broadcaster;
         ircClient = new IrcClient("iunomachine0","irc.freenode.net","#tdmiunopaymentchannel", this);
-
     }
 
     public void addReceivingKey(ECKey ecKey) {
@@ -42,9 +46,7 @@ public class PaymentChannel implements IrcClientCallbackInterface, IrcClientInte
         logger.info("Added ReceivingKey with Pubkey: " + ecKey.getPublicKeyAsHex());
     }
 
-    public void sendPayment(String pubKey, Coin amount, UUID invoiceId){
-        //TODO here comes the logic searching for the right channel to send the amount opening a channel if necessary?
-
+    public void trySendPayment(String pubKey, Coin amount, String invoiceId){
         PaymentChannelClient paymentChannelClient = null;
         //find a matching Channel
         for (PaymentChannelClient client:clientMap.values()) {
@@ -58,7 +60,11 @@ public class PaymentChannel implements IrcClientCallbackInterface, IrcClientInte
             paymentChannelClient = new PaymentChannelClient(pubKey,Coin.CENT,wallet,this,this);
             clientMap.put(paymentChannelClient.getChannelHash(),paymentChannelClient);
         }
-        paymentChannelClient.sendPayment(amount,invoiceId.toString());
+        paymentChannelClient.sendPayment(amount,invoiceId);
+    }
+
+    public boolean isIrcConnected(){
+        return ircClient.isConnected();
     }
 
     @Override

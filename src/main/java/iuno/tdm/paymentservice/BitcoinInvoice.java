@@ -20,6 +20,7 @@ package iuno.tdm.paymentservice;
 import com.google.common.base.Stopwatch;
 import com.google.common.io.BaseEncoding;
 import io.swagger.model.*;
+import iuno.tdm.paymentservice.paymentchannel.PaymentChannelInterface;
 import org.bitcoinj.core.*;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
@@ -45,6 +46,7 @@ import static org.bitcoinj.core.Utils.HEX;
 
 public class BitcoinInvoice {
     private final NetworkParameters params = Context.get().getParams();
+    private final PaymentChannelInterface paymentChannelInterface;
     private long totalAmount = 0;
     private long transferAmount = 0;
     private UUID invoiceId;
@@ -70,6 +72,8 @@ public class BitcoinInvoice {
     private TransactionList incomingTxList = new TransactionList();
 
     private TransactionList transferTxList = new TransactionList();
+
+    private boolean transfersPaidByPaymentChannel = false;
 
     public io.swagger.model.PaymentInformation getPaymentInformation() {
         return new io.swagger.model.PaymentInformation()
@@ -331,7 +335,11 @@ public class BitcoinInvoice {
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2,
+                   BitcoinInvoiceCallbackInterface callbackInterface,
+                   DeterministicSeed seed, PaymentChannelInterface paymentChannelInterface)
+            throws IllegalArgumentException {
+        this.paymentChannelInterface = paymentChannelInterface;
         bitcoinInvoiceCallbackInterface = callbackInterface;
         incomingTxList.addStateListener(incomingTxStateListener);
         transferTxList.addStateListener(transferTxStateListener);
@@ -430,6 +438,12 @@ public class BitcoinInvoice {
         if (transfers.isEmpty()) {
             throw new NoSuchFieldException("TransactionState not applicable. No transfers for this invoice.");
         }
+        if(transfersPaidByPaymentChannel){
+            State state = new State();
+            state.setState(State.StateEnum.MICROPAYMENTRECEIVED);
+            state.setDepthInBlocks(0);
+            return state;
+        }
         return transferTxList.getState();
     }
 
@@ -485,23 +499,58 @@ public class BitcoinInvoice {
             logger.warn(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
             return null;
         }
+        if(transfersPaidByPaymentChannel){
+            logger.warn(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
+            return null;
+        }
 
-        Transaction tx = new Transaction(params);
+        //are all transfers payable by PaymentChannel?
+        SendRequest sr = null;
+        if(allTransfersPaymentChannel()){
+            try{
+                for (PaymentInformation paymentInformation:transfers) {
+                    paymentChannelInterface.trySendPayment(
+                            paymentInformation.pcPubKey,
+                            paymentInformation.targetValue,
+                            paymentInformation.pcIncoiceId);
+                }
+                transfersPaidByPaymentChannel = true;
 
-        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-        if (incomingTxList.isOneOrMoreTxConfirmed(0))
-            for (TransactionInput txin : getInputs())
-                tx.addInput(txin);
 
-        addTransfersToTx(tx);
+            }catch (Exception e){
+                logger.error("Problem paying with PaymentChannel",e);
+            }
+        }
+        if(!transfersPaidByPaymentChannel){
+            Transaction tx = new Transaction(params);
 
-        tx.setMemo(invoiceId.toString());
-        SendRequest sr = SendRequest.forTx(tx);
-        transferTxList.add(tx);
-        logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
+            // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
+            if (incomingTxList.isOneOrMoreTxConfirmed(0))
+                for (TransactionInput txin : getInputs())
+                    tx.addInput(txin);
+
+            addTransfersToTx(tx);
+
+            tx.setMemo(invoiceId.toString());
+            sr = SendRequest.forTx(tx);
+            transferTxList.add(tx);
+            logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
+        }
 
         return sr;
     }
+
+    private boolean allTransfersPaymentChannel(){
+        boolean rv = true;
+        for (PaymentInformation pa : transfers) {
+            if(pa.pcIncoiceId.length() == 0 && pa.pcPubKey.length() == 0){
+                rv = false;
+                break;
+            }
+        }
+        return rv;
+    }
+
 
     private void addTransfersToTx(Transaction tx) {
         // add transfer outputs

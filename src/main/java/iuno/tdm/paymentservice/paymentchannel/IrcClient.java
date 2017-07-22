@@ -44,4 +44,8 @@ public class IrcClient extends ListenerAdapter implements IrcClientInterface{
         ircClientCallbackInterface.onMessage(event.getMessage());
         super.onMessage(event);
     }
+
+    public boolean isConnected(){
+        return botX.isConnected();
+    }
 }

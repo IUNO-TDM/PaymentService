@@ -218,7 +218,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv,
+                wallet.freshReceiveAddress(), wallet.freshReceiveAddress(),
+                this, randomSeed, paymentChannel);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         couponWallet.addChangeEventListener(this);
         peerGroup.addWallet(couponWallet);
