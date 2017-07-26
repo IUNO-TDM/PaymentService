@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -111,41 +112,54 @@ public class TransactionList implements TransactionConfidence.Listener {
     }
 
     private TransactionConfidence determineMostConfidentTransactionConfidence() {
-        Transaction mostConfidentTx = null;
-        for (Transaction tx : transactions.values()) {
-            if (mostConfidentTx == null) {
-                mostConfidentTx = tx;
+        Iterator<Transaction> iterator = transactions.values().iterator();
+
+        if (!iterator.hasNext())
+            return null;
+
+        Transaction currentTx = iterator.next();
+        TransactionConfidence currentTxConfidence;
+        int currentTxRating;
+
+        // first transaction is the best transaction to start with
+        Transaction bestTx = currentTx;
+        TransactionConfidence bestTxConfidence = bestTx.getConfidence();
+        int bestTxRating = mapConfidenceTypeRating(bestTxConfidence.getConfidenceType());
+
+        // if there are more transactions, check'em
+        while (iterator.hasNext()) {
+            currentTx = iterator.next();
+
+            currentTxConfidence = currentTx.getConfidence();
+            currentTxRating = mapConfidenceTypeRating(currentTxConfidence.getConfidenceType());
+
+            if (currentTxRating < bestTxRating) {
                 continue;
+
+            } else if (currentTxRating > bestTxRating) {
+                bestTx = currentTx;
+
+            } else {
+                // rating is equal at this place, let either numBroadcastPeers or DepthInBlocks decide
+                switch (currentTxConfidence.getConfidenceType()) {
+                    case PENDING:
+                        if (currentTxConfidence.numBroadcastPeers() > bestTxConfidence.numBroadcastPeers())
+                            bestTx = currentTx;
+                        break;
+                    case BUILDING:
+                        if (currentTxConfidence.getDepthInBlocks() > bestTxConfidence.getDepthInBlocks())
+                            bestTx = currentTx;
+                        break;
+                    default:
+                }
             }
 
-            TransactionConfidence txConfidence = tx.getConfidence();
-            TransactionConfidence mostConfidentTxConfidence = mostConfidentTx.getConfidence();
-            int txRating = mapConfidenceTypeRating(txConfidence.getConfidenceType());
-            int mcTxRating = mapConfidenceTypeRating(mostConfidentTxConfidence.getConfidenceType());
-
-            if (txRating < mcTxRating)
-                continue;
-
-            if (txRating > mcTxRating) {
-                mostConfidentTx = tx;
-                continue;
-            }
-
-            // rating is equal at this place, let either numBroadcastPeers or DepthInBlocks decide
-            switch (txConfidence.getConfidenceType()) {
-                case PENDING:
-                    if (txConfidence.numBroadcastPeers() > mostConfidentTxConfidence.numBroadcastPeers())
-                        mostConfidentTx = tx;
-                    break;
-                case BUILDING:
-                    if (txConfidence.getDepthInBlocks() > mostConfidentTxConfidence.getDepthInBlocks())
-                        mostConfidentTx = tx;
-                    break;
-                default:
-            }
+            // update confidence and rating to values of new best transaction
+            bestTxConfidence = bestTx.getConfidence();
+            bestTxRating = mapConfidenceTypeRating(bestTxConfidence.getConfidenceType());
         }
 
-        return (null == mostConfidentTx) ? null : mostConfidentTx.getConfidence();
+        return bestTxConfidence;
     }
 
     static private int mapConfidenceTypeRating(TransactionConfidence.ConfidenceType type) {
