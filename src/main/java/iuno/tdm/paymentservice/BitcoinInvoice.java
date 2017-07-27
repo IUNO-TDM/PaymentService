@@ -227,6 +227,8 @@ public class BitcoinInvoice {
         String response = "";
         url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+        con.setRequestProperty("User-Agent", "curl/7.52.1"); // fixme workaround until we have our own blockexplorer
+        con.setRequestProperty("Content-Type", "application/json");
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
