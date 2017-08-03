@@ -103,8 +103,13 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
         File chainFile = new File(workDir, PREFIX + ".spvchain");
         File walletFile = new File(workDir, PREFIX + ".wallet");
-        File backupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
-//        File backupFile = new File(workDir, PREFIX + ".backup"); // this shall be activated in the middle of april 2017 for a smooth migration from homedir to ~/.PaymentService
+        File oldBackupFile = new File(System.getProperty("user.home"), PREFIX + ".wallet");
+        File backupFile = new File(workDir, PREFIX + ".backup");
+
+        // migrate from old to new backupfile; remove the oldbackup code in 2018
+        if (!backupFile.exists() && oldBackupFile.exists()) {
+            oldBackupFile.renameTo(backupFile);
+        }
 
         // try to load regular wallet or if not existant load backup wallet or create new wallet
         // fail if an existing wallet file can not be read and admin needs to examine the wallets
