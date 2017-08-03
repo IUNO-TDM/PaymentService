@@ -47,7 +47,8 @@
                     <stopKey>stopit</stopKey>
                     <stopWait>10</stopWait>
                     <httpConnector>
-                        <port>8080</port>
+                        <host>${listening-interface}</host>
+                        <port>${listening-port}</port>
                         <idleTimeout>60000</idleTimeout>
                     </httpConnector>
                 </configuration>
@@ -206,5 +207,7 @@
         <logback-version>1.1.7</logback-version>
         <servlet-api-version>2.5</servlet-api-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <listening-interface>localhost</listening-interface>
+        <listening-port>8080</listening-port>
     </properties>
 </project>

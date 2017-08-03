@@ -18,33 +18,56 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
+import io.swagger.model.State;
 import javax.validation.constraints.*;
 
 /**
- * Error
+ * TransactionsInner
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
-public class Error   {
-  @JsonProperty("message")
-  private String message = null;
+public class TransactionsInner   {
+  @JsonProperty("transactionId")
+  private String transactionId = null;
 
-  public Error message(String message) {
-    this.message = message;
+  @JsonProperty("state")
+  private State state = null;
+
+  public TransactionsInner transactionId(String transactionId) {
+    this.transactionId = transactionId;
     return this;
   }
 
    /**
-   * meaningful error message
-   * @return message
+   * txid
+   * @return transactionId
   **/
-  @JsonProperty("message")
-  @ApiModelProperty(value = "meaningful error message")
-  public String getMessage() {
-    return message;
+  @JsonProperty("transactionId")
+  @ApiModelProperty(value = "txid")
+  public String getTransactionId() {
+    return transactionId;
   }
 
-  public void setMessage(String message) {
-    this.message = message;
+  public void setTransactionId(String transactionId) {
+    this.transactionId = transactionId;
+  }
+
+  public TransactionsInner state(State state) {
+    this.state = state;
+    return this;
+  }
+
+   /**
+   * Get state
+   * @return state
+  **/
+  @JsonProperty("state")
+  @ApiModelProperty(value = "")
+  public State getState() {
+    return state;
+  }
+
+  public void setState(State state) {
+    this.state = state;
   }
 
 
@@ -56,22 +79,24 @@ public class Error   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Error error = (Error) o;
-    return Objects.equals(this.message, error.message);
+    TransactionsInner transactionsInner = (TransactionsInner) o;
+    return Objects.equals(this.transactionId, transactionsInner.transactionId) &&
+        Objects.equals(this.state, transactionsInner.state);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(message);
+    return Objects.hash(transactionId, state);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Error {\n");
+    sb.append("class TransactionsInner {\n");
     
-    sb.append("    message: ").append(toIndentedString(message)).append("\n");
+    sb.append("    transactionId: ").append(toIndentedString(transactionId)).append("\n");
+    sb.append("    state: ").append(toIndentedString(state)).append("\n");
     sb.append("}");
     return sb.toString();
   }

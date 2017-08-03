@@ -8,6 +8,7 @@ import io.swagger.model.Coupon;
 import io.swagger.model.Error;
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
+import io.swagger.model.Transactions;
 
 import java.io.IOException;
 import java.net.URI;
@@ -18,21 +19,17 @@ import java.util.UUID;
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
-import java.io.InputStream;
 
 import org.bitcoinj.core.AddressFormatException;
-import org.bitcoinj.core.WrongNetworkException;
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
-
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-import javax.validation.constraints.*;
+
 import iuno.tdm.paymentservice.Bitcoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-03-07T13:08:18.801Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 
@@ -156,6 +153,22 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
         return Response.ok().entity(new ApiResponseMessage(ApiResponseMessage.OK, "magic!")).build();
     }
     @Override
+    public Response getInvoicePayingTransactions(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        try {
+            Transactions transactions = Bitcoin.getInstance().getInvoicePaymentTransactions(invoiceId);
+            resp = Response.ok().entity(transactions).build();
+
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            resp = Response.status(404).entity(err).build();
+        }
+        logger.info(String.format("%s (%03d) getInvoiceState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
+    }
+    @Override
     public Response getInvoiceState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
         Response resp;
         Error err = new Error();
@@ -169,6 +182,43 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             resp = Response.status(404).entity(err).build();
         }
         logger.info(String.format("%s (%03d) getInvoiceState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
+    }
+    @Override
+    public Response getInvoiceTransferState(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        try {
+            State state = Bitcoin.getInstance().getInvoiceTransferState(invoiceId);
+            resp = Response.ok().entity(state).build();
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            resp = Response.status(404).entity(err).build();
+        } catch (NoSuchFieldException e) {
+            err.setMessage("Invoice " + invoiceId + ": " + e.getMessage());
+            resp = Response.status(423  ).entity(err).build();
+        }
+        logger.info(String.format("%s (%03d) getInvoiceTransferState: %s", invoiceId, resp.getStatus(), err.getMessage()));
+        return resp;
+    }
+
+    @Override
+    public Response getInvoiceTransferTransactions(UUID invoiceId, SecurityContext securityContext) throws NotFoundException {
+        Response resp;
+        Error err = new Error();
+        err.setMessage("success");
+        try {
+            Transactions transactions = Bitcoin.getInstance().getInvoiceTransferTransactions(invoiceId);
+            resp = Response.ok().entity(transactions).build();
+        } catch (NullPointerException e) { // likely no invoice found for provided invoiceID
+            err.setMessage("no invoice found for id " + invoiceId);
+            resp = Response.status(404).entity(err).build();
+        } catch (NoSuchFieldException e) {
+            err.setMessage("Invoice " + invoiceId + ": " + e.getMessage());
+            resp = Response.status(423  ).entity(err).build();
+        }
+        logger.info(String.format("%s (%03d) getInvoiceTransferState: %s", invoiceId, resp.getStatus(), err.getMessage()));
         return resp;
     }
     @Override
