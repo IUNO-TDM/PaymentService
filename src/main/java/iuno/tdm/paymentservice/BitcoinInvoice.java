@@ -30,6 +30,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -232,7 +233,7 @@ public class BitcoinInvoice {
 
     static public String getUtxoString(String b58) throws IOException {
         URL url;
-        String response = "";
+        StringBuilder response = new StringBuilder();
         url = new URL(blockexplorerAddr + "/addr/" + b58 + "/utxo");
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
         if(!blockexplorerPasswd.isEmpty() && !blockexplorerUser.isEmpty()){
@@ -245,10 +246,10 @@ public class BitcoinInvoice {
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
-            response += line;
+            response.append(line);
         }
         con.disconnect();
-        return response;
+        return response.toString();
     }
 
     private long getSatoshisFromUtxoString(String str) {
