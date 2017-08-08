@@ -30,7 +30,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import java.util.Base64.Encoder;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -74,7 +73,7 @@ public class BitcoinInvoice {
 
     private TransactionList transferTxList = new TransactionList();
 
-    private static String blockexplorerAddr = "https://testnet.blockexplorer.com/api/";
+    private static String blockexplorerAddr = "https://test-insight.bitpay.com/api/";
     private static String blockexplorerUser = "";
     private static String blockexplorerPasswd = "";
 
