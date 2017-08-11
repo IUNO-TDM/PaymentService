@@ -20,12 +20,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class TransactionList implements TransactionConfidence.Listener {
 
-    Map<Sha256Hash, Transaction> transactions = new HashMap();
-    CopyOnWriteArrayList<TransactionListStateListener> listeners = new CopyOnWriteArrayList();
+    private Map<Sha256Hash, Transaction> transactions = new HashMap();
+    private CopyOnWriteArrayList<TransactionListStateListener> listeners = new CopyOnWriteArrayList();
 
-    State lastState = null;
-    Sha256Hash lastMostConfidentTxHash = null;
-    Transactions lastTransactions = null;
+    private State lastState = null;
+    private Sha256Hash lastMostConfidentTxHash = null;
+    private Transactions lastTransactions = null;
 
     private static final int UNKNOWN_RATING = 0;
     private static final int DEAD_RATING = 1;
@@ -38,9 +38,9 @@ public class TransactionList implements TransactionConfidence.Listener {
     /**
      * Add a transaction to the tracked list. The TransactionList automatically adds itself as a confidence listener
      * at this transaction
-     * @param transaction
+     * @param transaction to be added to the list
      */
-    public void add(Transaction transaction) {
+    void add(Transaction transaction) {
         logger.debug("Adding tx %s to TransactionList", transaction.getHashAsString());
         if (!transactions.containsKey(transaction.getHash())) {
             transactions.put(transaction.getHash(), transaction);
@@ -50,8 +50,7 @@ public class TransactionList implements TransactionConfidence.Listener {
         informStateListenersTransactionsChanged(getTransactions());
     }
 
-
-    public void addStateListener(TransactionListStateListener listener) {
+    void addStateListener(TransactionListStateListener listener) {
         listeners.add(listener);
     }
 
@@ -62,38 +61,40 @@ public class TransactionList implements TransactionConfidence.Listener {
     /**
      * Determines the most confident TransactionConfidence of the transaction in its list
      * @return The TransactionConfidence as State
+     * @throws NullPointerException
      */
-    public State getState() {
-        return mapConfidenceToState(determineMostConfidentTransactionConfidence());
+    State getMostConfidentState() throws NullPointerException {
+        return mapConfidenceToState(tryDetermineMostConfidentTransaction().getConfidence());
     }
 
+    private TransactionConfidence tryGetBestConfidence() {
+        TransactionConfidence confidence = null;
+        Transaction bestTx = tryDetermineMostConfidentTransaction();
+        if (null != bestTx) confidence = bestTx.getConfidence();
+        return confidence;
+    }
     /**
-     *
      * @return true if one or more of the transactions in the List have e Confidence Pending or Building
      */
-    public boolean isOneOrMoreTxPending() {
-        TransactionConfidence confidence = determineMostConfidentTransactionConfidence();
+    boolean isOneOrMoreTxPending() {
+        TransactionConfidence confidence = tryGetBestConfidence();
         return (confidence != null && mapConfidenceTypeRating(confidence.getConfidenceType()) >= PENDING_RATING);
     }
 
     /**
-     *
-     * @param minDepth the minimal Block Depth
      * @return true if one or more of the transactions in the List have e Confidence Building
      * and have a Block Depth >= minDepth
      */
-    public boolean isOneOrMoreTxConfirmed(int minDepth) {
-        TransactionConfidence confidence = determineMostConfidentTransactionConfidence();
-        return (confidence != null && mapConfidenceTypeRating(confidence.getConfidenceType()) >= BUILDING_RATING && minDepth <= confidence.getDepthInBlocks());
+    boolean isOneOrMoreTxConfirmed() {
+        TransactionConfidence confidence = tryGetBestConfidence();
+        return (confidence != null && mapConfidenceTypeRating(confidence.getConfidenceType()) >= BUILDING_RATING);
     }
 
     /**
      *
-     * @return the transaction object with the best TransactinoConfidence
+     * @return the transaction object with the best TransactionConfidence
      */
-    public Transaction getMostConfidentTransaction() {
-        return transactions.get(determineMostConfidentTransactionConfidence().getTransactionHash());
-    }
+    Transaction getMostConfidentTransaction() { return tryDetermineMostConfidentTransaction(); } // TODO ???
 
 
     /**
@@ -111,7 +112,7 @@ public class TransactionList implements TransactionConfidence.Listener {
         return txes;
     }
 
-    private TransactionConfidence determineMostConfidentTransactionConfidence() {
+    private Transaction tryDetermineMostConfidentTransaction() {
         Iterator<Transaction> iterator = transactions.values().iterator();
 
         if (!iterator.hasNext())
@@ -159,7 +160,7 @@ public class TransactionList implements TransactionConfidence.Listener {
             bestTxRating = mapConfidenceTypeRating(bestTxConfidence.getConfidenceType());
         }
 
-        return bestTxConfidence;
+        return bestTx;
     }
 
     static private int mapConfidenceTypeRating(TransactionConfidence.ConfidenceType type) {
@@ -291,7 +292,7 @@ public class TransactionList implements TransactionConfidence.Listener {
             lastMostConfidentTxHash = confidence.getTransactionHash();
             refreshNeeded = true;
         } else {
-            TransactionConfidence newMostConfidentConfidence = determineMostConfidentTransactionConfidence();
+            TransactionConfidence newMostConfidentConfidence = tryDetermineMostConfidentTransaction().getConfidence();
             State newState = mapConfidenceToState(newMostConfidentConfidence);
             Sha256Hash newTxHash = newMostConfidentConfidence.getTransactionHash();
             if (lastMostConfidentTxHash != newTxHash || statesAreDifferent(lastState, newState)) {

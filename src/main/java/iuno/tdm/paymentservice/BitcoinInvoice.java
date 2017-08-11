@@ -90,6 +90,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     private List<TransferPair> transfers = new Vector<>();
 
+    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
@@ -114,6 +115,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     };
 
+    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
@@ -189,7 +191,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     Transaction tryPayWithCoupons() {
         if (incomingTxList.isOneOrMoreTxPending()) {
-            if (!incomingTxList.isOneOrMoreTxConfirmed(2))
+            if (!incomingTxList.isOneOrMoreTxConfirmed())
                 logger.info(String.format("Invoice %s has already been paid.", invoiceId.toString()));
             return null;
         }
@@ -347,6 +349,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
+        // FIXME this listeners must also be removed
         incomingTxList.addStateListener(incomingTxStateListener);
         transferTxList.addStateListener(transferTxStateListener);
         // check sanity of invoice
@@ -439,14 +442,14 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     }
 
     State getState() {
-        return incomingTxList.getState();
+        return incomingTxList.getMostConfidentState();
     }
 
     State getTransferState() throws NoSuchFieldException {
         if (transfers.isEmpty()) {
             throw new NoSuchFieldException("TransactionState not applicable. No transfers for this invoice.");
         }
-        return transferTxList.getState();
+        return transferTxList.getMostConfidentState();
     }
 
     Transactions getPayingTransactions() {
@@ -505,7 +508,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         Transaction tx = new Transaction(params);
 
         // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-        if (incomingTxList.isOneOrMoreTxConfirmed(0))
+        if (incomingTxList.isOneOrMoreTxConfirmed())
             for (TransactionInput txin : getInputs())
                 tx.addInput(txin);
 
