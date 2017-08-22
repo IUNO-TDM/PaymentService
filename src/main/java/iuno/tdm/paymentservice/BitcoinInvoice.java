@@ -40,13 +40,14 @@ import java.util.*;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Utils.HEX;
+import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 
 /**
  * Invoices may be paid by either completing a BIP21 URI in one single transaction
  * or by completing all transfers in one single transaction.
  */
 
-public class BitcoinInvoice {
+public class BitcoinInvoice implements WalletChangeEventListener {
     private final NetworkParameters params = Context.get().getParams();
     private long totalAmount = 0;
     private long transferAmount = 0;
@@ -57,11 +58,11 @@ public class BitcoinInvoice {
     private Address transferAddress;
     private static final Logger logger = LoggerFactory.getLogger(BitcoinInvoice.class);
 
-    public Address getReceiveAddress() {
+    Address getReceiveAddress() {
         return receiveAddress;
     }
 
-    public Address getTransferAddress() {
+    Address getTransferAddress() {
         return transferAddress;
     }
 
@@ -162,8 +163,8 @@ public class BitcoinInvoice {
         }
     }
 
-    Vector<Coupon> coupons = new Vector<>();
-    Vector<String> keys = new Vector<>();
+    private Vector<Coupon> coupons = new Vector<>();
+    private Vector<String> keys = new Vector<>();
 
     AddressValuePair addCoupon(String key) throws IllegalStateException, IOException {
         if (isExpired()) throw new IllegalStateException("invoice is already expired");
@@ -187,8 +188,17 @@ public class BitcoinInvoice {
         return new AddressValuePair().address(pubKeyHash).coin(coupon.value);
     }
 
-    public Wallet getCouponWallet() {
+    /**
+     * This method is yet needed to add the couponWallet to the peerGroup owned by the parent class
+     * @return couponWallet
+     */
+    Wallet getCouponWallet() { // TODO remove this method
         return couponWallet;
+    }
+
+    @Override
+    public void onWalletChanged(Wallet wallet) { // couponWallet
+        tryPayWithCoupons();
     }
 
     /**
@@ -231,7 +241,7 @@ public class BitcoinInvoice {
         return result;
     }
 
-    static public String getUtxoString(String b58) throws IOException {
+    private static String getUtxoString(String b58) throws IOException {
         URL url;
         StringBuilder response = new StringBuilder();
         url = new URL(blockexplorerAddr + "/addr/" + b58 + "/utxo");
@@ -269,6 +279,7 @@ public class BitcoinInvoice {
 
         for (int i = 0; i < json.length(); i++) { // TODO two times the same for loop is inefficient
             final JSONObject jsonObject = json.getJSONObject(i);
+            final int confirmations = jsonObject.getInt("confirmations"); // confirmations
             final String txId = jsonObject.getString("txid");
             final Sha256Hash utxoHash = Sha256Hash.wrap(txId); // txid
             final int utxoIndex = jsonObject.getInt("vout"); // vout
@@ -279,7 +290,10 @@ public class BitcoinInvoice {
             Transaction tx = transactions.get(utxoHash);
             if (tx == null) {
                 tx = new FakeTransaction(params, utxoHash);
-                tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
+                tx.getConfidence().setConfidenceType(
+                        confirmations == 0 ? TransactionConfidence.ConfidenceType.PENDING : TransactionConfidence.ConfidenceType.BUILDING // FIXME: unsure if this works
+                );
+                tx.getConfidence().setDepthInBlocks(confirmations);
                 transactions.put(utxoHash, tx);
             }
 
@@ -322,7 +336,7 @@ public class BitcoinInvoice {
         }
     }
 
-    public static void importParams(HashMap<String, String> params){
+    static void importParams(HashMap<String, String> params){
         if (params.containsKey(PARAM_KEY_BE_ADDR)){
             blockexplorerAddr = params.get(PARAM_KEY_BE_ADDR);
         }
@@ -378,10 +392,11 @@ public class BitcoinInvoice {
         group = new KeyChainGroup(params, seed);
         group.setLookaheadSize(4);
         couponWallet = new Wallet(params, group);
+
         watch.stop();
         logger.info("wallet took {}", watch);
 
-        couponWallet.allowSpendingUnconfirmedTransactions();
+        couponWallet.addChangeEventListener(this); // FIXME add appropriate call to removeChangeEventListener
     }
 
     /**
@@ -546,7 +561,7 @@ public class BitcoinInvoice {
      *
      * @param tx new transaction with outputs to be checked
      */
-    public void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
+    void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
         logger.debug("transaction script: " + HEX.encode(tx.bitcoinSerialize()));
 
         if (addressCoinHashMap.keySet().contains(receiveAddress)) {
@@ -556,7 +571,6 @@ public class BitcoinInvoice {
                         + " to " + receiveAddress
                         + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
                 incomingTxList.add(tx);
-//                if (transfers.isEmpty()) transferTx = tx; // no transfers so invoice is already complete
             }
 
         } else if (doesTxFulfillTransferPayment(addressCoinHashMap)) {

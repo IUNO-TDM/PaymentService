@@ -37,7 +37,6 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
-import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -52,7 +51,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener, BitcoinInvoiceCallbackInterface {
+public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoiceCallbackInterface {
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
@@ -63,7 +62,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
     private HashMap<Address, BitcoinInvoice> addressHashMap = new HashMap<>();
-    private HashMap<Wallet, BitcoinInvoice> couponWalletBitcoinInvoiceHashMap = new HashMap<>();
 
     private static final String PREFIX = "PaymentService";
 
@@ -220,9 +218,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         inv.invoiceId(invoiceId);
         BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
-        couponWallet.addChangeEventListener(this);
         peerGroup.addWallet(couponWallet);
-        couponWalletBitcoinInvoiceHashMap.put(wallet, bcInvoice);
 
         // add invoice to hashmaps
         invoiceHashMap.put(invoiceId, bcInvoice);
@@ -274,9 +270,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
         Wallet couponWallet = bcInvoice.getCouponWallet();
-        couponWalletBitcoinInvoiceHashMap.remove(couponWallet);
         peerGroup.removeWallet(couponWallet);
-        couponWallet.removeChangeEventListener(this);
         invoiceHashMap.remove(id);
         addressHashMap.remove(bcInvoice.getReceiveAddress());
         addressHashMap.remove(bcInvoice.getTransferAddress());
@@ -351,17 +345,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
     }
 
-
-    @Override
-    public void onWalletChanged(Wallet wallet) {
-        BitcoinInvoice bcInvoice = couponWalletBitcoinInvoiceHashMap.get(wallet);
-        if (null != bcInvoice) {
-            Transaction txCoupon = bcInvoice.tryPayWithCoupons();
-            if (null != txCoupon) {
-                // syncBroadcastTransaction(tx);
-            }
-        }
-    }
 
     public void registerCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
         callbackClients.add(callbackClient);
