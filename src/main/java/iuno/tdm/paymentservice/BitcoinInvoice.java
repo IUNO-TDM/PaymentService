@@ -83,21 +83,6 @@ public class BitcoinInvoice implements WalletChangeEventListener {
     private static final String PARAM_KEY_BE_USER = "blockexplorer-user";
     private static final String PARAM_KEY_BE_PASSWD = "blockexplorer-passwd";
 
-
-    class TransferPair {
-        final Address address;
-        final Coin targetValue;
-
-        TransferPair(Address a, Coin target) {
-            address = a;
-            targetValue = target;
-        }
-
-        AddressValuePair getAddressValuePair() {
-            return new AddressValuePair().address(address.toBase58()).coin(targetValue.getValue());
-        }
-    }
-
     /**
      * This member contains all address value pairs for transfer payments.
      * It does not contain any payments to the payment services own wallet.
@@ -152,16 +137,6 @@ public class BitcoinInvoice implements WalletChangeEventListener {
         }
     };
 
-
-    class Coupon {
-        final ECKey ecKey;
-        long value;
-        Map<Sha256Hash, Transaction> transactions = null;
-
-        Coupon(ECKey ecKey) {
-            this.ecKey = ecKey;
-        }
-    }
 
     private Vector<Coupon> coupons = new Vector<>();
     private Vector<String> keys = new Vector<>();
