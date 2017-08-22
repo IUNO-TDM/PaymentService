@@ -46,6 +46,19 @@
     <servlet>
         <servlet-name>Bootstrap</servlet-name>
         <servlet-class>io.swagger.api.Bootstrap</servlet-class>
+
+        <init-param>
+            <param-name>blockexplorer-addr</param-name>
+            <param-value>https://tdm-jms.axoom.cloud/blockexplorer/</param-value>
+        </init-param>
+        <init-param>
+            <param-name>blockexplorer-user</param-name>
+            <param-value>explorer</param-value>
+        </init-param>
+        <init-param>
+            <param-name>blockexplorer-passwd</param-name>
+            <param-value>iunoexplorer</param-value>
+        </init-param>
         <load-on-startup>2</load-on-startup>
     </servlet>
     <servlet-mapping>

@@ -74,6 +74,15 @@ public class BitcoinInvoice {
 
     private TransactionList transferTxList = new TransactionList();
 
+    private static String blockexplorerAddr = "https://test-insight.bitpay.com/api/";
+    private static String blockexplorerUser = "";
+    private static String blockexplorerPasswd = "";
+
+    private static final String PARAM_KEY_BE_ADDR = "blockexplorer-addr";
+    private static final String PARAM_KEY_BE_USER = "blockexplorer-user";
+    private static final String PARAM_KEY_BE_PASSWD = "blockexplorer-passwd";
+
+
     class TransferPair {
         final Address address;
         final Coin targetValue;
@@ -224,18 +233,23 @@ public class BitcoinInvoice {
 
     static public String getUtxoString(String b58) throws IOException {
         URL url;
-        String response = "";
-        url = new URL("https://testnet.blockexplorer.com/api/addr/" + b58 + "/utxo");
+        StringBuilder response = new StringBuilder();
+        url = new URL(blockexplorerAddr + "/addr/" + b58 + "/utxo");
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
-        con.setRequestProperty("User-Agent", "curl/7.52.1"); // fixme workaround until we have our own blockexplorer
+        if(!blockexplorerPasswd.isEmpty() && !blockexplorerUser.isEmpty()){
+            String userpass = blockexplorerUser + ":" + blockexplorerPasswd;
+            String basicAuth = "Basic " + Base64.getEncoder().encodeToString(userpass.getBytes());
+            con.setRequestProperty ("Authorization", basicAuth);
+        }
+
         con.setRequestProperty("Content-Type", "application/json");
         BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
         String line;
         while ((line = in.readLine()) != null) {
-            response += line;
+            response.append(line);
         }
         con.disconnect();
-        return response;
+        return response.toString();
     }
 
     private long getSatoshisFromUtxoString(String str) {
@@ -307,6 +321,19 @@ public class BitcoinInvoice {
             return hash;
         }
     }
+
+    public static void importParams(HashMap<String, String> params){
+        if (params.containsKey(PARAM_KEY_BE_ADDR)){
+            blockexplorerAddr = params.get(PARAM_KEY_BE_ADDR);
+        }
+        if (params.containsKey(PARAM_KEY_BE_PASSWD)){
+            blockexplorerPasswd = params.get(PARAM_KEY_BE_PASSWD);
+        }
+        if (params.containsKey(PARAM_KEY_BE_USER)){
+            blockexplorerUser = params.get(PARAM_KEY_BE_USER);
+        }
+    }
+
 
     /**
      * This constructor checks a new invoice for sanity.

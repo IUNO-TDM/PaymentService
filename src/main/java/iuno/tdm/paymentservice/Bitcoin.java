@@ -73,6 +73,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     private static Bitcoin instance;
     private Context context;
 
+    private HashMap<String, String> params = new HashMap<String, String>();
+
     private Bitcoin() {
         BriefLogFormatter.initWithSilentBitcoinJ();
         ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger)LoggerFactory.getLogger(ch.qos.logback.classic.Logger.ROOT_LOGGER_NAME);
@@ -86,6 +88,11 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
         List<String> mnemonic = new ArrayList<>(0);
         randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
+    }
+
+    public void addParams(HashMap<String, String> params){
+        this.params.putAll(params);
+        BitcoinInvoice.importParams(this.params);
     }
 
     public static synchronized Bitcoin getInstance() {
