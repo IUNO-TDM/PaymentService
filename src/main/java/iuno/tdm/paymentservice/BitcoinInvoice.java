@@ -158,9 +158,8 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         // add key and unspent transactions to wallet
         group.importKeys(coupon.ecKey);
         coupon.transactions = getTransactionsForUtxoString(response);
-        for (final Transaction tx : coupon.transactions.values()) {
+        for (final Transaction tx : coupon.transactions.values())
             couponWallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.UNSPENT, tx));
-        }
 
         return new AddressValuePair().address(pubKeyHash).coin(coupon.value);
     }
@@ -189,41 +188,44 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @return null or signed transaction ready for broadcasting
      */
     Transaction tryPayWithCoupons() {
-        Transaction result = null;
-        Coin balance = couponWallet.getBalance(new CouponCoinSelector());
         if (incomingTxList.isOneOrMoreTxPending()) {
             if (!incomingTxList.isOneOrMoreTxConfirmed(2))
                 logger.info(String.format("Invoice %s has already been paid.", invoiceId.toString()));
+            return null;
+        }
 
-        } else if (balance.getValue() < totalAmount) {
+        Coin balance = couponWallet.getBalance(new CouponCoinSelector());
+        if (balance.getValue() < totalAmount) {
             logger.info(String.format("Invoice %s has too few coupons in wallet: %s",
                     invoiceId.toString(),
                     balance.toFriendlyString()));
+            return null;
+        }
 
+        logger.info(String.format("Invoice %s will be paid using coupons.", invoiceId.toString()));
+        Transaction tx = new Transaction(params);
+        addTransfersToTx(tx);
+        SendRequest sr = SendRequest.forTx(tx);
+        sr.coinSelector = new CouponCoinSelector();
+        sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+
+        if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
+            sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
+            sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
         } else {
-            logger.info(String.format("Invoice %s will be paid using coupons.", invoiceId.toString()));
-            Transaction tx = new Transaction(params);
-            addTransfersToTx(tx);
-            SendRequest sr = SendRequest.forTx(tx);
-            sr.coinSelector = new CouponCoinSelector();
-            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-            if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
-                sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
-                sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
-            } else {
-                sr.changeAddress = transferAddress;
-            }
+            sr.changeAddress = transferAddress;
+        }
 
-            try {
-                couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
-                couponWallet.commitTx(sr.tx);
-                result = sr.tx;
-                System.out.println(HEX.encode(result.bitcoinSerialize()));
-                incomingTxList.add(sr.tx);
-                if (!transfers.isEmpty()) transferTxList.add(sr.tx);
-            } catch (InsufficientMoneyException e) { // should never happen
-                e.printStackTrace();
-            }
+        Transaction result = null;
+        try {
+            couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
+            couponWallet.commitTx(sr.tx);
+            result = sr.tx;
+            System.out.println(HEX.encode(result.bitcoinSerialize()));
+            incomingTxList.add(sr.tx);
+            if (!transfers.isEmpty()) transferTxList.add(sr.tx);
+        } catch (InsufficientMoneyException e) { // should never happen
+            e.printStackTrace();
         }
 
         return result;
