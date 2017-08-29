@@ -24,6 +24,7 @@ import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import org.bitcoinj.core.*;
+import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
 import org.json.JSONArray;
@@ -47,7 +48,7 @@ import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
  * or by completing all transfers in one single transaction.
  */
 
-public class BitcoinInvoice implements WalletChangeEventListener {
+public class BitcoinInvoice implements WalletChangeEventListener, TransactionConfidenceEventListener {
     private final NetworkParameters params = Context.get().getParams();
     private long totalAmount = 0;
     private long transferAmount = 0;
@@ -176,41 +177,55 @@ public class BitcoinInvoice implements WalletChangeEventListener {
         tryPayWithCoupons();
     }
 
+    @Override
+    public void onTransactionConfidenceChanged(Wallet wallet, Transaction tx) {
+        tryPayWithCoupons();
+    }
+
     /**
      * Tries to pay the invoice using coupons.
      *
      * @return null or signed transaction ready for broadcasting
      */
     Transaction tryPayWithCoupons() {
-        Transaction result = null;
-        long balance = couponWallet.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).getValue();
         if (incomingTxList.isOneOrMoreTxPending()) {
-            logger.info(String.format("Transaction %s has already been paid.", invoiceId.toString()));
+            if (!incomingTxList.isOneOrMoreTxConfirmed(2))
+                logger.info(String.format("Invoice %s has already been paid.", invoiceId.toString()));
+            return null;
+        }
 
-        } else if (balance < totalAmount) {
-            logger.info("Too few coupons in wallet: " + couponWallet.getBalance().toFriendlyString());
+        Coin balance = couponWallet.getBalance(new CouponCoinSelector());
+        if (balance.getValue() < totalAmount) {
+            logger.info(String.format("Invoice %s has too few coupons in wallet: %s",
+                    invoiceId.toString(),
+                    balance.toFriendlyString()));
+            return null;
+        }
 
+        logger.info(String.format("Invoice %s will be paid using coupons.", invoiceId.toString()));
+        Transaction tx = new Transaction(params);
+        addTransfersToTx(tx);
+        SendRequest sr = SendRequest.forTx(tx);
+        sr.coinSelector = new CouponCoinSelector();
+        sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+
+        if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
+            sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
+            sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
         } else {
-            Transaction tx = new Transaction(params);
-            addTransfersToTx(tx);
-            SendRequest sr = SendRequest.forTx(tx);
-            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
-            if (balance > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
-                sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
-                sr.changeAddress = coupons.lastElement().ecKey.toAddress(params);
-            } else {
-                sr.changeAddress = transferAddress;
-            }
+            sr.changeAddress = transferAddress;
+        }
 
-            try {
-                couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
-                couponWallet.commitTx(sr.tx);
-                result = sr.tx;
-                incomingTxList.add(sr.tx);
-                if (!transfers.isEmpty()) transferTxList.add(sr.tx);
-            } catch (InsufficientMoneyException e) { // should never happen
-                e.printStackTrace();
-            }
+        Transaction result = null;
+        try {
+            couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
+            couponWallet.commitTx(sr.tx);
+            result = sr.tx;
+            System.out.println(HEX.encode(result.bitcoinSerialize()));
+            incomingTxList.add(sr.tx);
+            if (!transfers.isEmpty()) transferTxList.add(sr.tx);
+        } catch (InsufficientMoneyException e) { // should never happen
+            e.printStackTrace();
         }
 
         return result;
@@ -265,9 +280,7 @@ public class BitcoinInvoice implements WalletChangeEventListener {
             Transaction tx = transactions.get(utxoHash);
             if (tx == null) {
                 tx = new FakeTransaction(params, utxoHash);
-                tx.getConfidence().setConfidenceType(
-                        confirmations == 0 ? TransactionConfidence.ConfidenceType.PENDING : TransactionConfidence.ConfidenceType.BUILDING // FIXME: unsure if this works
-                );
+                tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
                 tx.getConfidence().setDepthInBlocks(confirmations);
                 transactions.put(utxoHash, tx);
             }
@@ -369,9 +382,10 @@ public class BitcoinInvoice implements WalletChangeEventListener {
         couponWallet = new Wallet(params, group);
 
         watch.stop();
-        logger.info("wallet took {}", watch);
+        logger.info("creating wallet took {}", watch);
 
-        couponWallet.addChangeEventListener(this); // FIXME add appropriate call to removeChangeEventListener
+        couponWallet.addChangeEventListener(this); // FIXME add appropriate call to remove the listener
+        couponWallet.addTransactionConfidenceEventListener(this); // FIXME add appropriate call to remove the listener
     }
 
     /**
