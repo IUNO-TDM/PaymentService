@@ -64,6 +64,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     private static final String PREFIX = "PaymentService";
 
+    private static boolean automaticallyRecoverBrokenWallet;
 
     private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
@@ -81,6 +82,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         final NetworkParameters params = TestNet3Params.get();
         context = new Context(params);
         Context.propagate(context);
+
+        // read system property to check if broken wallet shall be recovered from backup automatically
+        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet").equalsIgnoreCase("true");
 
         // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
@@ -117,27 +121,34 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         }
 
         // try to load regular wallet or if not existant load backup wallet or create new wallet
-        // fail if an existing wallet file can not be read and admin needs to examine the wallets
-        String filename = "n/a";
-        try {
-            if (walletFile.exists()) {
-                filename = walletFile.toString();
-                wallet = Wallet.loadFromFile(walletFile);
+        // optionally fail if an existing wallet file can not be read and admin needs to examine the wallets
+        // depending on configuration of automaticallyRecoverBrokenWallet
 
-            } else {
-                if (backupFile.exists()) {
-                    filename = backupFile.toString();
-                    wallet = Wallet.loadFromFile(backupFile);
+        // 1 remove chainfile if there is no regular wallet to replay blockchain
+        if (!walletFile.exists()) chainFile.delete();
 
-                } else {
-                    wallet = new Wallet(context);
-                }
-                chainFile.delete();
+        // 2 if there is neither a wallet nor a backup create a new one
+        if (!walletFile.exists() && !backupFile.exists()) {
+            wallet = new Wallet(context);
+        }
+
+        // 3 optionally try to load main wallet
+        if ((null == wallet) && walletFile.exists()) {
+            wallet = tryLoadWalletFromFile(walletFile);
+            if (!automaticallyRecoverBrokenWallet) {
+                logger.error("exiting because loading regular wallet file failed and automatic recovery is disabled");
+                return;
             }
+        }
 
-        } catch (UnreadableWalletException e) {
-            logger.warn(String.format("wallet file %s could not be read: %s", filename, e.getMessage()));
-            e.printStackTrace();
+        // 4 optionally try to load backup wallet
+        if ((null == wallet) && backupFile.exists()) {
+            wallet = tryLoadWalletFromFile(backupFile);
+        }
+
+        // 5 optionally give up
+        if (null == wallet) {
+            logger.error("exiting because no wallet could be initialized, please check manually");
             return;
         }
 
@@ -195,6 +206,22 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                     }
                 }
         );
+    }
+
+    /***
+     * This method tries to load a wallet from a file.
+     * @param walletFile
+     * @return null if loading failed, Wallet if it succeeded
+     */
+    private Wallet tryLoadWalletFromFile(File walletFile) {
+        Wallet w = null;
+        try {
+            w = Wallet.loadFromFile(walletFile);
+        } catch (UnreadableWalletException e) {
+            logger.warn(String.format("wallet file %s could not be read: %s", walletFile.toString(), e.getMessage()));
+            e.printStackTrace();
+        }
+        return w;
     }
 
     public void stop() {
