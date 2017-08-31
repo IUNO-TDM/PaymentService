@@ -124,32 +124,39 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         // optionally fail if an existing wallet file can not be read and admin needs to examine the wallets
         // depending on configuration of automaticallyRecoverBrokenWallet
 
-        // 1 remove chainfile if there is no regular wallet
-        // 2 if there is no wallet at all create a new one
+        // 1 remove chainfile if there is no regular wallet to replay blockchain
+        if (!walletFile.exists()) chainFile.delete();
+
+        // 2 if there is neither a wallet nor a backup create a new one
+        if (!walletFile.exists() && !backupFile.exists()) {
+            wallet = new Wallet(context);
+        }
+
         // 3 optionally try to load main wallet
-        // 4 optionally try to load backup wallet
-        // 5 optionally give up
-
-        String filename = "n/a";
-        try {
-            if (walletFile.exists()) {
-                filename = walletFile.toString();
+        if ((null == wallet) && walletFile.exists()) {
+            try {
                 wallet = Wallet.loadFromFile(walletFile);
-
-            } else {
-                if (backupFile.exists()) {
-                    filename = backupFile.toString();
-                    wallet = Wallet.loadFromFile(backupFile);
-
-                } else {
-                    wallet = new Wallet(context);
-                }
-                chainFile.delete();
+            } catch (UnreadableWalletException e) {
+                logger.warn(String.format("wallet file %s could not be read: %s", walletFile.toString(), e.getMessage()));
+                e.printStackTrace();
+                return;
             }
+        }
 
-        } catch (UnreadableWalletException e) {
-            logger.warn(String.format("wallet file %s could not be read: %s", filename, e.getMessage()));
-            e.printStackTrace();
+        // 4 optionally try to load backup wallet
+        if ((null == wallet) && backupFile.exists()) {
+            try {
+                wallet = Wallet.loadFromFile(backupFile);
+            } catch (UnreadableWalletException e) {
+                logger.warn(String.format("wallet file %s could not be read: %s", backupFile.toString(), e.getMessage()));
+                e.printStackTrace();
+                return;
+            }
+        }
+
+        // 5 optionally give up
+        if (null == wallet) {
+            logger.error("could not initialize wallet, please check manually");
             return;
         }
 
