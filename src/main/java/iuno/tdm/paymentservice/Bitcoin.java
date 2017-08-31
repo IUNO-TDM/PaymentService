@@ -134,29 +134,21 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
         // 3 optionally try to load main wallet
         if ((null == wallet) && walletFile.exists()) {
-            try {
-                wallet = Wallet.loadFromFile(walletFile);
-            } catch (UnreadableWalletException e) {
-                logger.warn(String.format("wallet file %s could not be read: %s", walletFile.toString(), e.getMessage()));
-                e.printStackTrace();
+            wallet = tryLoadWalletFromFile(walletFile);
+            if (!automaticallyRecoverBrokenWallet) {
+                logger.error("exiting because loading regular wallet file failed and automatic recovery is disabled");
                 return;
             }
         }
 
         // 4 optionally try to load backup wallet
         if ((null == wallet) && backupFile.exists()) {
-            try {
-                wallet = Wallet.loadFromFile(backupFile);
-            } catch (UnreadableWalletException e) {
-                logger.warn(String.format("wallet file %s could not be read: %s", backupFile.toString(), e.getMessage()));
-                e.printStackTrace();
-                return;
-            }
+            wallet = tryLoadWalletFromFile(backupFile);
         }
 
         // 5 optionally give up
         if (null == wallet) {
-            logger.error("could not initialize wallet, please check manually");
+            logger.error("exiting because no wallet could be initialized, please check manually");
             return;
         }
 
@@ -214,6 +206,22 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                     }
                 }
         );
+    }
+
+    /***
+     * This method tries to load a wallet from a file.
+     * @param walletFile
+     * @return null if loading failed, Wallet if it succeeded
+     */
+    private Wallet tryLoadWalletFromFile(File walletFile) {
+        Wallet w = null;
+        try {
+            w = Wallet.loadFromFile(walletFile);
+        } catch (UnreadableWalletException e) {
+            logger.warn(String.format("wallet file %s could not be read: %s", walletFile.toString(), e.getMessage()));
+            e.printStackTrace();
+        }
+        return w;
     }
 
     public void stop() {
