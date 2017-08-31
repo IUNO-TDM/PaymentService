@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -58,13 +57,14 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private PeerGroup peerGroup = null;
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
     private DateTime lastCleanup = DateTime.now();
-    private DeterministicSeed randomSeed;
+    private DeterministicSeed couponRandomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
     private HashMap<Address, BitcoinInvoice> addressHashMap = new HashMap<>();
 
     private static final String PREFIX = "PaymentService";
 
+    private static boolean automaticallyRecoverBrokenWallet;
 
     private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
@@ -83,9 +83,13 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         context = new Context(params);
         Context.propagate(context);
 
+        // read system property to check if broken wallet shall be recovered from backup automatically
+        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet").equalsIgnoreCase("true");
+
+        // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
         List<String> mnemonic = new ArrayList<>(0);
-        randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
+        couponRandomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
     }
 
     public void addParams(HashMap<String, String> params){
@@ -117,27 +121,43 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         }
 
         // try to load regular wallet or if not existant load backup wallet or create new wallet
-        // fail if an existing wallet file can not be read and admin needs to examine the wallets
-        String filename = "n/a";
-        try {
-            if (walletFile.exists()) {
-                filename = walletFile.toString();
-                wallet = Wallet.loadFromFile(walletFile);
+        // optionally fail if an existing wallet file can not be read and admin needs to examine the wallets
+        // depending on configuration of automaticallyRecoverBrokenWallet
 
+        // 1 remove chainfile if there is no regular wallet to replay blockchain
+        if (!walletFile.exists()) chainFile.delete();
+
+        // 2 if there is neither a wallet nor a backup create a new one
+        if (!walletFile.exists() && !backupFile.exists()) {
+            String seedCode = System.getProperty("walletSeed");
+            if (seedCode.isEmpty()) {
+                wallet = new Wallet(context); // create random new wallet
             } else {
-                if (backupFile.exists()) {
-                    filename = backupFile.toString();
-                    wallet = Wallet.loadFromFile(backupFile);
-
-                } else {
-                    wallet = new Wallet(context);
-                }
-                chainFile.delete();
+                DeterministicSeed seed = tryCreateDeterministicSeed(seedCode,
+                        System.getProperty("walletPassphrase"),
+                        Long.parseLong(System.getProperty("walletCreationTime")));
+                if (seed == null) return;
+                wallet = Wallet.fromSeed(context.getParams(), seed);
             }
+        }
 
-        } catch (UnreadableWalletException e) {
-            logger.warn(String.format("wallet file %s could not be read: %s", filename, e.getMessage()));
-            e.printStackTrace();
+        // 3 optionally try to load main wallet
+        if ((null == wallet) && walletFile.exists()) {
+            wallet = tryLoadWalletFromFile(walletFile);
+            if ((null == wallet) && (!automaticallyRecoverBrokenWallet)) {
+                logger.error("exiting because loading regular wallet file failed and automatic recovery is disabled");
+                return;
+            }
+        }
+
+        // 4 optionally try to load backup wallet
+        if ((null == wallet) && backupFile.exists()) {
+            wallet = tryLoadWalletFromFile(backupFile);
+        }
+
+        // 5 optionally give up
+        if (null == wallet) {
+            logger.error("exiting because no wallet could be initialized, please check manually");
             return;
         }
 
@@ -197,6 +217,33 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         );
     }
 
+    private DeterministicSeed tryCreateDeterministicSeed(String seedCode, String passphrase, long creationtime) {
+        DeterministicSeed seed = null;
+        try {
+            seed = new DeterministicSeed(seedCode.replaceAll(",", " "), null, passphrase, creationtime);
+        } catch (UnreadableWalletException e) {
+            e.printStackTrace();
+            logger.error("could not create deterministic seed from given seed; " + e.getMessage());
+        }
+        return seed;
+    }
+
+    /***
+     * This method tries to load a wallet from a file.
+     * @param walletFile
+     * @return null if loading failed, Wallet if it succeeded
+     */
+    private Wallet tryLoadWalletFromFile(File walletFile) {
+        Wallet w = null;
+        try {
+            w = Wallet.loadFromFile(walletFile);
+        } catch (UnreadableWalletException e) {
+            logger.warn(String.format("wallet file %s could not be read: %s", walletFile.toString(), e.getMessage()));
+            e.printStackTrace();
+        }
+        return w;
+    }
+
     public void stop() {
         peerGroup.stop();
         wallet.shutdownAutosaveAndWait();
@@ -216,7 +263,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, couponRandomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         peerGroup.addWallet(couponWallet);
 
