@@ -56,6 +56,18 @@
                             <name>automaticallyRecoverBrokenWallet</name>
                             <value>${automaticallyRecoverBrokenWallet}</value>
                         </systemProperty>
+                        <systemProperty>
+                            <name>walletSeed</name>
+                            <value>${walletSeed}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>walletPassphrase</name>
+                            <value>${walletPassphrase}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>walletCreationTime</name>
+                            <value>${walletCreationTime}</value>
+                        </systemProperty>
                     </systemProperties>
                 </configuration>
                 <executions>
@@ -225,5 +237,8 @@
         <listening-interface>localhost</listening-interface>
         <listening-port>8080</listening-port>
         <automaticallyRecoverBrokenWallet>true</automaticallyRecoverBrokenWallet>
+        <walletSeed>never,use,this,seed,never,use,this,seed,never,use,this,seed</walletSeed>
+        <walletPassphrase></walletPassphrase>
+        <walletCreationTime>1504199300</walletCreationTime>
     </properties>
 </project>

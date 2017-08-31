@@ -129,7 +129,16 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
         // 2 if there is neither a wallet nor a backup create a new one
         if (!walletFile.exists() && !backupFile.exists()) {
-            wallet = new Wallet(context);
+            String seedCode = System.getProperty("walletSeed");
+            if (seedCode.isEmpty()) {
+                wallet = new Wallet(context); // create random new wallet
+            } else {
+                DeterministicSeed seed = tryCreateDeterministicSeed(seedCode,
+                        System.getProperty("walletPassphrase"),
+                        Long.parseLong(System.getProperty("walletCreationTime")));
+                if (seed == null) return;
+                wallet = Wallet.fromSeed(context.getParams(), seed);
+            }
         }
 
         // 3 optionally try to load main wallet
@@ -206,6 +215,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
                     }
                 }
         );
+    }
+
+    private DeterministicSeed tryCreateDeterministicSeed(String seedCode, String passphrase, long creationtime) {
+        DeterministicSeed seed = null;
+        try {
+            seed = new DeterministicSeed(seedCode.replaceAll(",", " "), null, passphrase, creationtime);
+        } catch (UnreadableWalletException e) {
+            e.printStackTrace();
+            logger.error("could not create deterministic seed from given seed; " + e.getMessage());
+        }
+        return seed;
     }
 
     /***
