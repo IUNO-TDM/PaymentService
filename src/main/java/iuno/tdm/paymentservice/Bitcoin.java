@@ -135,7 +135,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         // 3 optionally try to load main wallet
         if ((null == wallet) && walletFile.exists()) {
             wallet = tryLoadWalletFromFile(walletFile);
-            if (!automaticallyRecoverBrokenWallet) {
+            if ((null == wallet) && (!automaticallyRecoverBrokenWallet)) {
                 logger.error("exiting because loading regular wallet file failed and automatic recovery is disabled");
                 return;
             }
