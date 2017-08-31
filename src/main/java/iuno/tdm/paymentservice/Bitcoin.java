@@ -64,6 +64,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     private static final String PREFIX = "PaymentService";
 
+    private static boolean automaticallyRecoverBrokenWallet;
 
     private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
 
@@ -81,6 +82,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         final NetworkParameters params = TestNet3Params.get();
         context = new Context(params);
         Context.propagate(context);
+
+        // read system property to check if broken wallet shall be recovered from backup automatically
+        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet").equalsIgnoreCase("true");
 
         // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
@@ -117,7 +121,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         }
 
         // try to load regular wallet or if not existant load backup wallet or create new wallet
-        // fail if an existing wallet file can not be read and admin needs to examine the wallets
+        // optionally fail if an existing wallet file can not be read and admin needs to examine the wallets
+        // depending on configuration of automaticallyRecoverBrokenWallet
+
+        // 1 remove chainfile if there is no regular wallet
+        // 2 if there is no wallet at all create a new one
+        // 3 optionally try to load main wallet
+        // 4 optionally try to load backup wallet
+        // 5 optionally give up
+
         String filename = "n/a";
         try {
             if (walletFile.exists()) {
