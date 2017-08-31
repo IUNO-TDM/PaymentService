@@ -43,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.Null;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -58,7 +57,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     private PeerGroup peerGroup = null;
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
     private DateTime lastCleanup = DateTime.now();
-    private DeterministicSeed randomSeed;
+    private DeterministicSeed couponRandomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
     private HashMap<Address, BitcoinInvoice> addressHashMap = new HashMap<>();
@@ -83,9 +82,10 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
         context = new Context(params);
         Context.propagate(context);
 
+        // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
         List<String> mnemonic = new ArrayList<>(0);
-        randomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
+        couponRandomSeed = new DeterministicSeed(seed, mnemonic, MnemonicCode.BIP39_STANDARDISATION_TIME_SECS);
     }
 
     public void addParams(HashMap<String, String> params){
@@ -216,7 +216,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, randomSeed);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, couponRandomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         peerGroup.addWallet(couponWallet);
 
