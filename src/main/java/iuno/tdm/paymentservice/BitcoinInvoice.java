@@ -221,7 +221,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
             couponWallet.completeTx(sr); // TODO this is a race in case two invoices use the same (yet unfunded) coupon
             couponWallet.commitTx(sr.tx);
             result = sr.tx;
-            System.out.println(HEX.encode(result.bitcoinSerialize()));
+            System.out.println(HEX.encode(result.bitcoinSerialize())); // this serialized tx could be posted to block explorer, see https://github.com/IUNO-TDM/PaymentService/issues/49
             incomingTxList.add(sr.tx);
             if (!transfers.isEmpty()) transferTxList.add(sr.tx);
         } catch (InsufficientMoneyException e) { // should never happen
