@@ -508,10 +508,11 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         Transaction tx = new Transaction(params);
 
-        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-        if (incomingTxList.isOneOrMoreTxConfirmed())
-            for (TransactionInput txin : getInputs())
-                tx.addInput(txin);
+// commented as workaround for a bug in bitcoinj, see https://github.com/IUNO-TDM/PaymentService/issues/51
+//        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
+//        if (incomingTxList.isOneOrMoreTxConfirmed())
+//            for (TransactionInput txin : getInputs())
+//                tx.addInput(txin);
 
         addTransfersToTx(tx);
 
