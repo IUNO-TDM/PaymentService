@@ -37,6 +37,7 @@ import org.bitcoinj.wallet.DeterministicSeed;
 import org.bitcoinj.wallet.SendRequest;
 import org.bitcoinj.wallet.UnreadableWalletException;
 import org.bitcoinj.wallet.Wallet;
+import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.bitcoinj.wallet.listeners.WalletCoinsReceivedEventListener;
 import org.joda.time.DateTime;
 import org.slf4j.Logger;
@@ -50,7 +51,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoiceCallbackInterface {
+public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener, BitcoinInvoiceCallbackInterface {
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
@@ -175,6 +176,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             wallet.reset(); // reset wallet if chainfile does not exist
         // wallet.allowSpendingUnconfirmedTransactions();
         wallet.addCoinsReceivedEventListener(this);
+        wallet.addChangeEventListener(this);
         wallet.setDescription(this.getClass().getName());
         logStatus();
 
@@ -246,6 +248,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
 
     public void stop() {
         peerGroup.stop();
+        wallet.removeChangeEventListener(this);
+        wallet.removeCoinsReceivedEventListener(this);
         wallet.shutdownAutosaveAndWait();
     }
 
@@ -386,12 +390,30 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, BitcoinInvoice
             }
         }
 
+        logger.info("Balance: " + wallet.getBalance().toFriendlyString());
+    }
+
+
+    @Override
+    public void onWalletChanged(Wallet wallet) {
+        for (UUID uuid: invoiceHashMap.keySet()) {
+            SendRequest sr = invoiceHashMap.get(uuid).tryFinishInvoice();
+            if (null != sr) {
+                try {
+                    wallet.completeTx(sr);
+                    wallet.maybeCommitTx(sr.tx);
+                    syncBroadcastTransaction(sr.tx);
+                } catch (InsufficientMoneyException e) {
+                    logger.debug(String.format("%s: too few coins in wallet to fulfill transfer payment", uuid.toString()));
+                }
+            }
+        }
+
         // cleanup expired transactions
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
     }
-
 
     public void registerCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
         callbackClients.add(callbackClient);
