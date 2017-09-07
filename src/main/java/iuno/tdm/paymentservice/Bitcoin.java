@@ -61,7 +61,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     private DeterministicSeed couponRandomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
-    private HashMap<Address, BitcoinInvoice> addressHashMap = new HashMap<>();
 
     private static final String PREFIX = "PaymentService";
 
@@ -273,8 +272,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
         // add invoice to hashmaps
         invoiceHashMap.put(invoiceId, bcInvoice);
-        addressHashMap.put(bcInvoice.getReceiveAddress(), bcInvoice);
-        addressHashMap.put(bcInvoice.getTransferAddress(), bcInvoice);
         logger.info("Added invoice " + invoiceId.toString() + " to hashmap.");
         logger.info(invoiceId.toString() + " - " + bcInvoice.getBip21URI());
         return invoiceId;
@@ -323,8 +320,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         Wallet couponWallet = bcInvoice.getCouponWallet();
         peerGroup.removeWallet(couponWallet);
         invoiceHashMap.remove(id);
-        addressHashMap.remove(bcInvoice.getReceiveAddress());
-        addressHashMap.remove(bcInvoice.getTransferAddress());
     }
 
     public Set<UUID> getInvoiceIds() {
@@ -372,22 +367,11 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
             }
         }
 
-        for (Address address : addressCoinHashMap.keySet()) {
-            if (addressHashMap.containsKey(address)) {
-                BitcoinInvoice bcInvoice = addressHashMap.get(address);
-                bcInvoice.sortOutputsToAddresses(tx, addressCoinHashMap);
-
-                SendRequest sr = bcInvoice.tryFinishInvoice();
-                if (null != sr) {
-                    try {
-                        wallet.completeTx(sr);
-                        wallet.maybeCommitTx(sr.tx);
-                        syncBroadcastTransaction(sr.tx);
-                    } catch (InsufficientMoneyException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+        for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
+            bcInvoice.sortOutputsToAddresses(tx, addressCoinHashMap);
+            SendRequest sr = bcInvoice.tryFinishInvoice(wallet);
+            if (null != sr)
+                syncBroadcastTransaction(sr.tx);
         }
 
         logger.info("Balance: " + wallet.getBalance().toFriendlyString());
@@ -397,16 +381,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     @Override
     public void onWalletChanged(Wallet wallet) {
         for (UUID uuid: invoiceHashMap.keySet()) {
-            SendRequest sr = invoiceHashMap.get(uuid).tryFinishInvoice();
-            if (null != sr) {
-                try {
-                    wallet.completeTx(sr);
-                    wallet.maybeCommitTx(sr.tx);
-                    syncBroadcastTransaction(sr.tx);
-                } catch (InsufficientMoneyException e) {
-                    logger.debug(String.format("%s: too few coins in wallet to fulfill transfer payment", uuid.toString()));
-                }
-            }
+            SendRequest sr = invoiceHashMap.get(uuid).tryFinishInvoice(wallet);
+            if (null != sr)
+                syncBroadcastTransaction(sr.tx);
         }
 
         // cleanup expired transactions

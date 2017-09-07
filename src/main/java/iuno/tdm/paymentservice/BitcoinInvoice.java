@@ -492,7 +492,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      *
      * @return SendRequest object or null
      */
-    SendRequest tryFinishInvoice() {
+    SendRequest tryFinishInvoice(Wallet wallet) {
         if (transfers.isEmpty()) {
             logger.warn(String.format("Invoice %s has no transfers.", invoiceId.toString()));
             return null;
@@ -518,8 +518,16 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
-        transferTxList.add(tx); // TODO this is too early, tx has no inputs at this place
-        logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
+
+        try {
+            wallet.completeTx(sr);
+            wallet.maybeCommitTx(sr.tx);
+            transferTxList.add(sr.tx);
+            logger.debug(String.format("Forwarded transfers for invoice %s.", invoiceId.toString()));
+        } catch (InsufficientMoneyException e) {
+            logger.debug(String.format("%s: too few coins in wallet to fulfill transfer payment", invoiceId.toString()));
+            sr = null;
+        }
 
         return sr;
     }
@@ -532,21 +540,21 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     }
 
     private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
-        boolean result = true;
+        // own wallet must be paid
+        return (foo.keySet().contains(transferAddress)) // own wallet must be paid
+                && (totalAmount - transferAmount) <= foo.get(transferAddress).getValue()
+                && doesTxFulfillTransfers(foo);
+    }
 
-        if ((!foo.keySet().contains(transferAddress)) // own wallet must be paid
-                || (totalAmount - transferAmount) > foo.get(transferAddress).getValue()) {
-            result = false;
-        } else {
-            for (TransferPair pa : transfers) { // all transfers must be paid as well
-                if (!(foo.keySet().contains(pa.address))
-                        || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
-                    result = false;
-                    break;
-                }
+    private boolean doesTxFulfillTransfers(HashMap<Address, Coin> foo) {
+        boolean result = true;
+        for (TransferPair pa : transfers) { // all transfers must be paid as well
+            if (!(foo.keySet().contains(pa.address))
+                    || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
+                result = false;
+                break;
             }
         }
-
         return result;
     }
 
@@ -572,6 +580,11 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                     + " to " + transferAddress);
             incomingTxList.add(tx);
             if (!transfers.isEmpty()) transferTxList.add(tx);
+
+        } else if (!transfers.isEmpty() && doesTxFulfillTransfers(addressCoinHashMap)) {
+            // this is to recognize a transfer payment that became changed by malleability
+            logger.info(String.format("%s received transfers only", invoiceId.toString()));
+            transferTxList.add(tx);
 
         } else {
             logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
