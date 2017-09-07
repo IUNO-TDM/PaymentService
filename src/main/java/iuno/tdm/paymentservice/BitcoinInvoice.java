@@ -422,7 +422,8 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService", "all your coins belong to us");
+        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService",
+                "Thank you! :)");
     }
 
     /**
@@ -516,7 +517,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         tx.setMemo(invoiceId.toString());
         SendRequest sr = SendRequest.forTx(tx);
-        transferTxList.add(tx);
+        transferTxList.add(tx); // TODO this is too early, tx has no inputs at this place
         logger.debug(String.format("Forwarding transfers for invoice %s.", invoiceId.toString()));
 
         return sr;
