@@ -14,6 +14,8 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static io.swagger.model.State.StateEnum.UNKNOWN;
+
 /**
  * Created by goergch on 26.04.17.
  * Handles a set of Transactions. The List can track the Confidence / State.
@@ -42,10 +44,13 @@ public class TransactionList implements TransactionConfidence.Listener {
      */
     void add(Transaction transaction) {
         logger.debug("Adding tx %s to TransactionList", transaction.getHashAsString());
-        if (!transactions.containsKey(transaction.getHash())) {
-            transactions.put(transaction.getHash(), transaction);
-            transaction.getConfidence().addEventListener(this);
-        }
+
+        Sha256Hash txHash = transaction.getHash();
+
+        Transaction prevValue = transactions.put(txHash, transaction);
+        if (null != prevValue) prevValue.getConfidence().removeEventListener(this);
+        transaction.getConfidence().addEventListener(this);
+
         logger.debug("This list has now %d transactions", transactions.size());
         informStateListenersTransactionsChanged(getTransactions());
     }
@@ -59,12 +64,16 @@ public class TransactionList implements TransactionConfidence.Listener {
     }
 
     /**
-     * Determines the most confident TransactionConfidence of the transaction in its list
-     * @return The TransactionConfidence as State
-     * @throws NullPointerException
+     * Determines the most confident TransactionConfidence of the transaction in its list.
+     * @return State object for most confident transaction or State UNKNOWN if no transaction is in list
      */
-    State getMostConfidentState() throws NullPointerException {
-        return mapConfidenceToState(tryDetermineMostConfidentTransaction().getConfidence());
+    State getMostConfidentState() {
+        State ret = new State();
+        ret.setDepthInBlocks(Integer.MIN_VALUE);
+        Transaction tx = tryDetermineMostConfidentTransaction();
+        if (null != tx)
+            ret = mapConfidenceToState(tx.getConfidence());
+        return ret;
     }
 
     private TransactionConfidence tryGetBestConfidence() {
