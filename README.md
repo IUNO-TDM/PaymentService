@@ -26,3 +26,9 @@ http://localhost:8080/v1/swagger.json
 
 Note that if you have configured the `host` to be something other than localhost, the calls through
 swagger-ui will be directed to that host and not localhost!
+
+
+To create a wallet from a given seed use the parameter ```walletSeed``` on the first run of Payment Service:
+```
+mvn jetty:run -DwalletSeed=never,drop,fragile,orange,artwork,picture,off,balcony,over,seven,potato,people
+```

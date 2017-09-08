@@ -47,9 +47,28 @@
                     <stopKey>stopit</stopKey>
                     <stopWait>10</stopWait>
                     <httpConnector>
-                        <port>8080</port>
+                        <host>${listening-interface}</host>
+                        <port>${listening-port}</port>
                         <idleTimeout>60000</idleTimeout>
                     </httpConnector>
+                    <systemProperties>
+                        <systemProperty>
+                            <name>automaticallyRecoverBrokenWallet</name>
+                            <value>${automaticallyRecoverBrokenWallet}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>walletSeed</name>
+                            <value>${walletSeed}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>walletPassphrase</name>
+                            <value>${walletPassphrase}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>walletCreationTime</name>
+                            <value>${walletCreationTime}</value>
+                        </systemProperty>
+                    </systemProperties>
                 </configuration>
                 <executions>
                     <execution>
@@ -90,6 +109,15 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.2</version>
+                <configuration>
+                    <source>${java.version}</source>
+                    <target>${java.version}</target>
+                </configuration>
             </plugin>
         </plugins>
     </build>
@@ -164,7 +192,7 @@
         <dependency>
             <groupId>org.bitcoinj</groupId>
             <artifactId>bitcoinj-core</artifactId>
-            <version>0.14.4</version>
+            <version>0.14.5</version>
             <scope>compile</scope>
         </dependency>
 
@@ -195,7 +223,7 @@
         </repository>
     </repositories>
     <properties>
-        <java.version>1.7</java.version>
+        <java.version>1.8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
         <swagger-core-version>1.5.12</swagger-core-version>
@@ -206,5 +234,11 @@
         <logback-version>1.1.7</logback-version>
         <servlet-api-version>2.5</servlet-api-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <listening-interface>localhost</listening-interface>
+        <listening-port>8080</listening-port>
+        <automaticallyRecoverBrokenWallet>true</automaticallyRecoverBrokenWallet>
+        <walletSeed>never,use,this,seed,never,use,this,seed,never,use,this,seed</walletSeed>
+        <walletPassphrase></walletPassphrase>
+        <walletCreationTime>1504199300</walletCreationTime>
     </properties>
 </project>
