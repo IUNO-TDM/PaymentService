@@ -75,7 +75,11 @@ public class InvoicesApiServiceImpl extends InvoicesApiService {
             err.setMessage("Peergroup is unavailable.");
             resp = Response.status(503).entity(err).build();
 
-        } else {
+        } else if (null == invoice) {
+            err.setMessage("Invoice object must not be null.");
+            resp = Response.status(400).entity(err).build();
+
+        }else {
             URI createdUri = null;
             try {
                 invoiceId = bc.addInvoice(invoice);
