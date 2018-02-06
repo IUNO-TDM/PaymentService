@@ -1,6 +1,7 @@
 package iuno.tdm.paymentservice.init;
 
 import ch.qos.logback.classic.Level;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.params.TestNet3Params;
@@ -33,9 +34,13 @@ public class WalletInitializer {
             Wallet wallet = new Wallet(context);
             DeterministicSeed seed = wallet.getKeyChainSeed();
             String seedString = seed.getMnemonicCode().toString();
+            Address address = wallet.freshReceiveAddress();
             System.out.println(seedString.substring(1,seedString.length()-1));
             System.out.println(seed.getCreationTimeSeconds());
+            System.out.println(address.toBase58());
+
         }
+
 
 
     }
