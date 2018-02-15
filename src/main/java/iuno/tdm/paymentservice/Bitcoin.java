@@ -314,6 +314,14 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getTransferTransactions();
     }
 
+    public long getEstimatedBalance(){
+        return wallet.getBalance(Wallet.BalanceType.ESTIMATED).value;
+    }
+
+    public long getSpendableBalance(){
+        return wallet.getBalance().value;
+    }
+
 
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);

@@ -1,15 +1,11 @@
 swagger: '2.0'
 info:
   title: IUNO TDM Payment Service API
-  description: Create invoices, check payment and forward coins.
-  version: "1.0.0"
-# the domain of the service
-host: localhost:8080
-# array of all schemes that your API supports
+  description: 'Create invoices, check payment and forward coins.'
+  version: 1.0.0
+host: 'localhost:8080'
 schemes:
   - http
-#  - https
-# will be prefixed to all paths
 basePath: /v1
 consumes:
   - application/json
@@ -17,6 +13,19 @@ produces:
   - application/json
   - text/plain
 paths:
+  /wallet/balance:
+    get:
+      summary: Returns the balance of the internal Wallet
+      operationId: getWalletBalance
+      responses:
+        '200':
+          description: Balance with all UTXO and confident balance
+          schema:
+            $ref: '#/definitions/Balance'
+        '503':
+          description: service unavailable
+          schema:
+            $ref: '#/definitions/Error'
   /invoices:
     post:
       summary: Add one new invoice.
@@ -29,19 +38,19 @@ paths:
           schema:
             $ref: '#/definitions/Invoice'
       responses:
-        201:
+        '201':
           description: id of new invoice
           schema:
-            $ref: "#/definitions/Invoice"
+            $ref: '#/definitions/Invoice'
           headers:
             Location:
               description: the absolute path to the created resource
               type: string
-        400:
+        '400':
           description: bad request
           schema:
             $ref: '#/definitions/Error'
-        503:
+        '503':
           description: service unavailable
           schema:
             $ref: '#/definitions/Error'
@@ -49,7 +58,7 @@ paths:
       summary: The invoices endpoint returns a list of all known invoices ids.
       operationId: getInvoices
       responses:
-        200:
+        '200':
           description: an array of invoice ids
           schema:
             type: array
@@ -57,8 +66,7 @@ paths:
               type: string
               format: uuid
               description: unique id of the invoice assigned by payment service
-
-  /invoices/{invoiceId}:
+  '/invoices/{invoiceId}':
     get:
       summary: Returns information about the invoice to the provided id.
       operationId: getInvoiceById
@@ -70,14 +78,14 @@ paths:
           required: true
           description: the invoice id to get the information for
       responses:
-        404:
+        '200':
+          description: returns the information about the invoice
+          schema:
+            $ref: '#/definitions/Invoice'
+        '404':
           description: invoice not found
           schema:
             $ref: '#/definitions/Error'
-        200:
-          description: returns the information about the invoice
-          schema:
-            $ref: "#/definitions/Invoice"
     delete:
       summary: Deletes the invoice to the provided ID.
       operationId: deleteInvoiceById
@@ -89,14 +97,13 @@ paths:
           required: true
           description: the id of the invoice to delete
       responses:
-        404:
+        '200':
+          description: invoice deleted
+        '404':
           description: invoice not found
           schema:
             $ref: '#/definitions/Error'
-        200:
-          description: invoice deleted
-
-  /invoices/{invoiceId}/bip21:
+  '/invoices/{invoiceId}/bip21':
     get:
       summary: Returns a Bip21 URI for the invoice.
       operationId: getInvoiceBip21
@@ -108,16 +115,15 @@ paths:
           required: true
           description: the invoice id to get the Bip21 URI for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the Bip21 URI for the invoice
           schema:
             type: string
-
-  /invoices/{invoiceId}/state:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/state':
     get:
       summary: Returns a confidence object that describes the state of the incoming tx.
       operationId: getInvoiceState
@@ -129,16 +135,15 @@ paths:
           required: true
           description: the invoice id to get the state for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the state object of the incoming tx
           schema:
             $ref: '#/definitions/State'
-            
-  /invoices/{invoiceId}/transferState:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/transferState':
     get:
       summary: Returns a confidence object that describes the state of the transfer tx.
       operationId: getInvoiceTransferState
@@ -150,20 +155,19 @@ paths:
           required: true
           description: the invoice id to get the state for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        423:
-          description: no transfer state because there are no transfers in the invoice
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the state object of the transfer tx
           schema:
             $ref: '#/definitions/State'
-            
-  /invoices/{invoiceId}/payingTransactions:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        '423':
+          description: no transfer state because there are no transfers in the invoice
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/payingTransactions':
     get:
       summary: Returns all transaction that are paying this invoice
       operationId: getInvoicePayingTransactions
@@ -175,17 +179,15 @@ paths:
           required: true
           description: the invoice id to get the state for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the state object of the transfer tx
           schema:
             $ref: '#/definitions/Transactions'
-
-  
-  /invoices/{invoiceId}/transferTransactions:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/transferTransactions':
     get:
       summary: Returns all transaction that are paying transfers
       operationId: getInvoiceTransferTransactions
@@ -197,22 +199,23 @@ paths:
           required: true
           description: the invoice id to get the state for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        423:
-          description: no tx because there are no transfers in the invoice
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the state object of the transfer tx
           schema:
             $ref: '#/definitions/Transactions'
-            
-  /invoices/{invoiceId}/transfers:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+        '423':
+          description: no tx because there are no transfers in the invoice
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/transfers':
     get:
-      summary: Returns a transfer object as array of address/value pairs to complete the invoice in one transaction.
+      summary: >-
+        Returns a transfer object as array of address/value pairs to complete
+        the invoice in one transaction.
       operationId: getInvoiceTransfers
       parameters:
         - name: invoiceId
@@ -222,52 +225,35 @@ paths:
           required: true
           description: the invoice id to get transfers for
       responses:
-        404:
-          description: invoice not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the address value pairs for the invoice as array
           schema:
             type: array
             items:
               $ref: '#/definitions/AddressValuePair'
-
-  /invoices/{invoiceId}/coupons:
+        '404':
+          description: invoice not found
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/coupons':
     post:
       summary: Adds one coupon to the invoice.
       operationId: addCouponToInvoice
       parameters:
-      - name: invoiceId
-        in: path
-        type: string
-        format: uuid
-        required: true
-        description: the id of the invoice the coupon is for
-      - name: coupon
-        in: body
-        required: true
-        description: coupon code
-        schema:
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the id of the invoice the coupon is for
+        - name: coupon
+          in: body
+          required: true
+          description: coupon code
+          schema:
             $ref: '#/definitions/Coupon'
       responses:
-        503:
-          description: balance of coupon could not be retrieved
-          schema:
-            $ref: '#/definitions/Error'
-        422:
-          description: coupon code is invalid
-          schema:
-            $ref: '#/definitions/Error'
-        409:
-          description: invoice already closed
-          schema:
-            $ref: '#/definitions/Error'
-        404:
-          description: invoice id not found
-          schema:
-            $ref: '#/definitions/Error'
-        201:
+        '201':
           description: returns the balance of the new coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
@@ -275,55 +261,80 @@ paths:
             Location:
               type: string
               description: the absolute path to the created resource
+        '404':
+          description: invoice id not found
+          schema:
+            $ref: '#/definitions/Error'
+        '409':
+          description: invoice already closed
+          schema:
+            $ref: '#/definitions/Error'
+        '422':
+          description: coupon code is invalid
+          schema:
+            $ref: '#/definitions/Error'
+        '503':
+          description: balance of coupon could not be retrieved
+          schema:
+            $ref: '#/definitions/Error'
     get:
       summary: Returns a list of coupon adresses along with their balance.
       operationId: getInvoiceCoupons
       parameters:
-      - name: invoiceId
-        in: path
-        type: string
-        format: uuid
-        required: true
-        description: the id of the invoice to get the coupons balances for
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the id of the invoice to get the coupons balances for
       responses:
-        404:
-          description: invoice id not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the balance for each coupon
           schema:
             type: array
             items:
               $ref: '#/definitions/AddressValuePair'
-
-  /invoices/{invoiceId}/coupons/{couponAddress}:
+        '404':
+          description: invoice id not found
+          schema:
+            $ref: '#/definitions/Error'
+  '/invoices/{invoiceId}/coupons/{couponAddress}':
     get:
       summary: Returns the balance for the requested coupon.
       operationId: getInvoiceCouponBalance
       parameters:
-      - name: invoiceId
-        in: path
-        type: string
-        format: uuid
-        required: true
-        description: the id of the invoice to get the coupons balance for
-      - name: couponAddress
-        in: path
-        type: string
-        required: true
-        description: the address of the coupon to get the balance for
+        - name: invoiceId
+          in: path
+          type: string
+          format: uuid
+          required: true
+          description: the id of the invoice to get the coupons balance for
+        - name: couponAddress
+          in: path
+          type: string
+          required: true
+          description: the address of the coupon to get the balance for
       responses:
-        404:
-          description: object not found
-          schema:
-            $ref: '#/definitions/Error'
-        200:
+        '200':
           description: returns the balance of the coupon
           schema:
             $ref: '#/definitions/AddressValuePair'
-
+        '404':
+          description: object not found
+          schema:
+            $ref: '#/definitions/Error'
 definitions:
+  Balance:
+    type: object
+    properties:
+      spendable:
+        type: integer
+        format: int64
+        description: value in Satoshis
+      estimated:
+        type: integer
+        format: int64
+        description: value in Satoshis
   AddressValuePair:
     type: object
     properties:
@@ -334,7 +345,6 @@ definitions:
         type: integer
         format: int64
         description: value in Satoshis
-
   Invoice:
     type: object
     properties:
@@ -357,8 +367,9 @@ definitions:
         description: unique id of the invoice assigned by payment service
       referenceId:
         type: string
-        description: id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service
-
+        description: >-
+          id defined by the client for its internal reference, which is just
+          stored and passed but not processed by the payment service
   State:
     description: invoice confidence state
     type: object
@@ -368,30 +379,27 @@ definitions:
         description: confidence state
         default: unknown
         enum:
-        - building
-        - pending
-        - dead
-        - unknown
-        - conflict
+          - building
+          - pending
+          - dead
+          - unknown
+          - conflict
       depthInBlocks:
         type: integer
         format: int32
         description: depth of a building transaction in blocks
-
   Coupon:
     type: object
     properties:
       coupon:
         type: string
         description: bip38 encoded bitcoin private key
-
   Error:
     type: object
     properties:
       message:
         type: string
         description: meaningful error message
-        
   Transactions:
     type: array
     items:
@@ -402,4 +410,3 @@ definitions:
           description: txid
         state:
           $ref: '#/definitions/State'
-          

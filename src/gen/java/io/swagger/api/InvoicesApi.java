@@ -23,6 +23,7 @@ import java.io.InputStream;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
 
+import javax.servlet.ServletConfig;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
@@ -33,9 +34,30 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T11:48:32.147Z")
 public class InvoicesApi  {
-   private final InvoicesApiService delegate = InvoicesApiServiceFactory.getInvoicesApi();
+   private final InvoicesApiService delegate;
+
+   public InvoicesApi(@Context ServletConfig servletContext) {
+      InvoicesApiService delegate = null;
+
+      if (servletContext != null) {
+         String implClass = servletContext.getInitParameter("InvoicesApi.implementation");
+         if (implClass != null && !"".equals(implClass.trim())) {
+            try {
+               delegate = (InvoicesApiService) Class.forName(implClass).newInstance();
+            } catch (Exception e) {
+               throw new RuntimeException(e);
+            }
+         } 
+      }
+
+      if (delegate == null) {
+         delegate = InvoicesApiServiceFactory.getInvoicesApi();
+      }
+
+      this.delegate = delegate;
+   }
 
     @POST
     @Path("/{invoiceId}/coupons")
