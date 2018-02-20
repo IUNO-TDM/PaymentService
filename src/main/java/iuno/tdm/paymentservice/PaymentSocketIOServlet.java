@@ -22,7 +22,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
-public class PaymentSocketServlet extends JettySocketIOServlet {
+public class PaymentSocketIOServlet extends JettySocketIOServlet {
     private Logger logger;
     private Bitcoin bitcoin = Bitcoin.getInstance();
 
@@ -30,12 +30,12 @@ public class PaymentSocketServlet extends JettySocketIOServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
 
-        logger = LoggerFactory.getLogger(PaymentSocketServlet.class);
+        logger = LoggerFactory.getLogger(PaymentSocketIOServlet.class);
 
         of("/invoices").on(new ConnectionListener() {
             @Override
             public void onConnect(final Socket socket) throws ConnectionException {
-                logger.info("new client connected on PaymentSocketServlet");
+                logger.info("new client connected on PaymentSocketIOServlet");
                 socket.on("room", new EventListener() {
                     @Override
                     public Object onEvent(String name, Object[] args, boolean ackRequested) {

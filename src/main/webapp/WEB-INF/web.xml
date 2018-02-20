@@ -66,12 +66,12 @@
         <url-pattern>/v1/*</url-pattern>
     </servlet-mapping>
     <servlet-mapping>
-        <servlet-name>PaymentSocketServlet</servlet-name>
+        <servlet-name>PaymentSocketIOServlet</servlet-name>
         <url-pattern>/socket.io/*</url-pattern>
     </servlet-mapping>
     <servlet>
-        <servlet-name>PaymentSocketServlet</servlet-name>
-        <servlet-class>iuno.tdm.paymentservice.PaymentSocketServlet</servlet-class>
+        <servlet-name>PaymentSocketIOServlet</servlet-name>
+        <servlet-class>iuno.tdm.paymentservice.PaymentSocketIOServlet</servlet-class>
     </servlet>
     <filter>
         <filter-name>ApiOriginFilter</filter-name>
