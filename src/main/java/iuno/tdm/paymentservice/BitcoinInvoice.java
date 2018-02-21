@@ -338,7 +338,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     }
 
-
     /**
      * This constructor checks a new invoice for sanity.
      *
@@ -349,7 +348,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
-        // FIXME this listeners must also be removed
         incomingTxList.addStateListener(incomingTxStateListener);
         transferTxList.addStateListener(transferTxStateListener);
         // check sanity of invoice
@@ -389,6 +387,18 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         couponWallet.addChangeEventListener(this); // FIXME add appropriate call to remove the listener
         couponWallet.addTransactionConfidenceEventListener(this); // FIXME add appropriate call to remove the listener
+    }
+
+    @Override
+    protected void finalize() throws Throwable {
+        try {
+            couponWallet.removeChangeEventListener(this); // FIXME invoice will never be cleaned up due to pending reference inside couponWallet
+            couponWallet.removeTransactionConfidenceEventListener(this); // FIXME invoice will never be cleaned up due to pending reference inside couponWallet
+            incomingTxList.removeStateListener(incomingTxStateListener);
+            transferTxList.removeStateListener(transferTxStateListener);
+        } finally {
+            super.finalize();
+        }
     }
 
     /**

@@ -67,12 +67,11 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private static boolean automaticallyRecoverBrokenWallet;
 
-    private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
-
     private static Bitcoin instance;
     private Context context;
 
     private ServletContext servletContext;
+    private PaymentSocketIOServlet paymentSocketIOServlet;
 
     private HashMap<String, String> params = new HashMap<String, String>();
 
@@ -117,7 +116,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
         ServletContext socketioctx = servletContext.getContext("iuno.tdm.paymentservice.PaymentSocketIOServlet");
 
-        PaymentSocketIOServlet paymentSocketIOServlet = (PaymentSocketIOServlet) socketioctx.getAttribute(PaymentSocketIOServlet.PAYMENTSERVLET);
+        paymentSocketIOServlet = (PaymentSocketIOServlet) socketioctx.getAttribute(PaymentSocketIOServlet.PAYMENTSERVLET);
 
         File chainFile = new File(workDir, PREFIX + ".spvchain");
         File walletFile = new File(workDir, PREFIX + ".wallet");
@@ -409,37 +408,19 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
     }
 
-    public void registerCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
-        callbackClients.add(callbackClient);
-    }
-
-    public void unregisterCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
-        callbackClients.remove(callbackClient);
-    }
-
     public void sendInvoiceStateChangeToCallbackClients(Invoice invoice, State state){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceStateChanged(invoice,state);
-        }
-
+        paymentSocketIOServlet.invoiceStateChanged(invoice,state);
     }
     public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceTransferStateChanged(invoice,state);
-        }
-
+        paymentSocketIOServlet.invoiceTransferStateChanged(invoice,state);
     }
 
     public void sendPayingTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoicePayingTransactionsChanged(invoice, transactions);
-        }
+        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice, transactions);
     }
 
     public void sendTransferTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceTransferTransactionsChanged(invoice, transactions);
-        }
+        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice, transactions);
     }
 
     @Override

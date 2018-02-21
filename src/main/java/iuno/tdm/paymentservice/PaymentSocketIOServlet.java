@@ -22,7 +22,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
-public class PaymentSocketIOServlet extends JettySocketIOServlet {
+public class PaymentSocketIOServlet extends JettySocketIOServlet implements BitcoinCallbackInterface {
     public static final String PAYMENTSERVLET = "PaymentSocketIoCallback";
 
     private Logger logger;
@@ -89,61 +89,57 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet {
                     }
                 });
         });
-
-
-        BitcoinCallbackInterface client = new BitcoinCallbackInterface() {
-            @Override
-            public void invoiceStateChanged(Invoice invoice, State state) {
-                try {
-                    //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildStateJsonString(invoice, state);
-                    String roomId = invoice.getInvoiceId().toString();
-                    of("/invoices").in(roomId).emit("StateChange", jsonString);
-                } catch (SocketIOException e) {
-                    logger.error("SocketIOException in invoiceStateChanged ", e);
-                }
-            }
-
-            @Override
-            public void invoiceTransferStateChanged(Invoice invoice, State state) {
-                try {
-                    //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildStateJsonString(invoice, state);
-                    String roomId = invoice.getInvoiceId().toString();
-                    of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
-                } catch (SocketIOException e) {
-                    logger.error("SocketIOException in invoiceStateChanged ", e);
-                }
-            }
-
-            @Override
-            public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
-                try {
-                    //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildTransactionsJsonString(invoice, transactions);
-                    String roomId = invoice.getInvoiceId().toString();
-                    of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
-                } catch (SocketIOException e) {
-                    logger.error("SocketIOException in PayingTransactionsChange ", e);
-                }
-            }
-
-            @Override
-            public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
-                try {
-                    //TODO find more elegant way to generate a JSON object
-                    String jsonString = buildTransactionsJsonString(invoice, transactions);
-                    String roomId = invoice.getInvoiceId().toString();
-                    of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
-                } catch (SocketIOException e) {
-                    logger.error("SocketIOException in TransferTransactionsChange ", e);
-                }
-            }
-        };
-
-
-        bitcoin.registerCallbackInterfaceClient(client);
     }
+
+
+    @Override
+    public void invoiceStateChanged(Invoice invoice, State state) {
+        try {
+            //TODO find more elegant way to generate a JSON object
+            String jsonString = buildStateJsonString(invoice, state);
+            String roomId = invoice.getInvoiceId().toString();
+            of("/invoices").in(roomId).emit("StateChange", jsonString);
+        } catch (SocketIOException e) {
+            logger.error("SocketIOException in invoiceStateChanged ", e);
+        }
+    }
+
+    @Override
+    public void invoiceTransferStateChanged(Invoice invoice, State state) {
+        try {
+            //TODO find more elegant way to generate a JSON object
+            String jsonString = buildStateJsonString(invoice, state);
+            String roomId = invoice.getInvoiceId().toString();
+            of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
+        } catch (SocketIOException e) {
+            logger.error("SocketIOException in invoiceStateChanged ", e);
+        }
+    }
+
+    @Override
+    public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
+        try {
+            //TODO find more elegant way to generate a JSON object
+            String jsonString = buildTransactionsJsonString(invoice, transactions);
+            String roomId = invoice.getInvoiceId().toString();
+            of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
+        } catch (SocketIOException e) {
+            logger.error("SocketIOException in PayingTransactionsChange ", e);
+        }
+    }
+
+    @Override
+    public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
+        try {
+            //TODO find more elegant way to generate a JSON object
+            String jsonString = buildTransactionsJsonString(invoice, transactions);
+            String roomId = invoice.getInvoiceId().toString();
+            of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
+        } catch (SocketIOException e) {
+            logger.error("SocketIOException in TransferTransactionsChange ", e);
+        }
+    }
+
 
 
     static String buildStateJsonString(Invoice invoice, State state) {
