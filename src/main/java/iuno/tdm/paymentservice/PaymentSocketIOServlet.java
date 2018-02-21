@@ -61,7 +61,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceStateChanged(Invoice invoice, State state) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("StateChange", jsonString);
@@ -73,7 +72,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceTransferStateChanged(Invoice invoice, State state) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
@@ -85,7 +83,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildTransactionsJsonString(invoice, transactions);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
@@ -97,7 +94,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildTransactionsJsonString(invoice, transactions);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
@@ -107,7 +103,7 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     }
 
 
-
+    // TODO use Json builder https://docs.oracle.com/javaee/7/api/javax/json/JsonObjectBuilder.html
     static String buildStateJsonString(Invoice invoice, State state) {
         String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
                 + "\",\"referenceId\":\"" + invoice.getReferenceId()
@@ -115,6 +111,7 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         return jsonString;
     }
 
+    // TODO use Json builder https://docs.oracle.com/javaee/7/api/javax/json/JsonObjectBuilder.html
     static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
 
         StringBuilder builder = new StringBuilder();
