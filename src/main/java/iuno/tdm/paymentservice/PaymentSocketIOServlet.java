@@ -23,25 +23,28 @@ import java.util.UUID;
  * Created by goergch on 06.03.17.
  */
 public class PaymentSocketIOServlet extends JettySocketIOServlet {
+    public static final String PAYMENTSERVLET = "PaymentSocketIoCallback";
+
     private Logger logger;
-    private Bitcoin bitcoin = Bitcoin.getInstance();
+    private Bitcoin bitcoin;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        bitcoin = Bitcoin.getInstance();
+
+        config.getServletContext().setAttribute(PAYMENTSERVLET, this);
 
         logger = LoggerFactory.getLogger(PaymentSocketIOServlet.class);
 
-        of("/invoices").on(new ConnectionListener() {
-            @Override
-            public void onConnect(final Socket socket) throws ConnectionException {
+        of("/invoices").on(socket -> {
                 logger.info("new client connected on PaymentSocketIOServlet");
                 socket.on("room", new EventListener() {
                     @Override
                     public Object onEvent(String name, Object[] args, boolean ackRequested) {
                         if (args[0].getClass().equals(String.class)) {
                             String room = (String) args[0];
-                            socket.join((String) args[0]);
+                            socket.join(room);
                             try {
                                 BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String) args[0]));
                                 String jsonString = buildStateJsonString(bcInvoice.getInvoice(), bcInvoice.getState());
@@ -85,7 +88,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet {
 
                     }
                 });
-            }
         });
 
 

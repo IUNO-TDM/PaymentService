@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.servlet.ServletContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -70,6 +71,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private static Bitcoin instance;
     private Context context;
+
+    private ServletContext servletContext;
 
     private HashMap<String, String> params = new HashMap<String, String>();
 
@@ -106,9 +109,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return Bitcoin.instance;
     }
 
-    public void start() { // TODO: this method must be called once only!
+    public void start(ServletContext sctx) { // TODO: this method must be called once only!
         String workDir = System.getProperty("user.home") + "/." + PREFIX;
         new File(workDir).mkdirs();
+
+        servletContext = sctx;
+
+        ServletContext socketioctx = servletContext.getContext("iuno.tdm.paymentservice.PaymentSocketIOServlet");
+
+        PaymentSocketIOServlet paymentSocketIOServlet = (PaymentSocketIOServlet) socketioctx.getAttribute(PaymentSocketIOServlet.PAYMENTSERVLET);
 
         File chainFile = new File(workDir, PREFIX + ".spvchain");
         File walletFile = new File(workDir, PREFIX + ".wallet");

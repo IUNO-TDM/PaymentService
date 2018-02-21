@@ -59,7 +59,7 @@
             <param-name>blockexplorer-passwd</param-name>
             <param-value>iunoexplorer</param-value>
         </init-param>
-        <load-on-startup>2</load-on-startup>
+        <load-on-startup>3</load-on-startup> <!-- must be started after SocketIO to get object reference via context -->
     </servlet>
     <servlet-mapping>
         <servlet-name>jersey</servlet-name>
@@ -72,6 +72,7 @@
     <servlet>
         <servlet-name>PaymentSocketIOServlet</servlet-name>
         <servlet-class>iuno.tdm.paymentservice.PaymentSocketIOServlet</servlet-class>
+        <load-on-startup>2</load-on-startup> <!-- must be started before Bootstrap to pass object reference via context -->
     </servlet>
     <filter>
         <filter-name>ApiOriginFilter</filter-name>

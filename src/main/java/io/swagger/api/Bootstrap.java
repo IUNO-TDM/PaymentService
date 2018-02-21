@@ -29,7 +29,6 @@ public class Bootstrap extends HttpServlet {
     ServletContext context = config.getServletContext();
     Swagger swagger = new Swagger().info(info);
 
-
     HashMap<String, String> params = new HashMap<>();
     //Build parameter Hashmap
     final Enumeration initParameterNames = config.getInitParameterNames();
@@ -41,11 +40,9 @@ public class Bootstrap extends HttpServlet {
       }
     }
 
-
-
     Bitcoin bitcoin = Bitcoin.getInstance();
     bitcoin.addParams(params);
-    bitcoin.start();
+    bitcoin.start(context);
 
     new SwaggerContextService().withServletConfig(config).updateSwagger(swagger);
   }
