@@ -22,7 +22,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
-public class PaymentSocketIOServlet extends JettySocketIOServlet implements BitcoinCallbackInterface {
+public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooEmitter {
     public static final String PAYMENTSERVLET = "PaymentSocketIoCallback";
 
     private Logger logger;

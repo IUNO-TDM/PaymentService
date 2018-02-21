@@ -408,38 +408,23 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
     }
 
-    public void sendInvoiceStateChangeToCallbackClients(Invoice invoice, State state){
-        paymentSocketIOServlet.invoiceStateChanged(invoice,state);
-    }
-    public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
-        paymentSocketIOServlet.invoiceTransferStateChanged(invoice,state);
-    }
-
-    public void sendPayingTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice, transactions);
-    }
-
-    public void sendTransferTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice, transactions);
-    }
-
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
-        sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
+        paymentSocketIOServlet.invoiceStateChanged(invoice.getInvoice(), state);
     }
 
     @Override
     public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
-        sendInvoiceTransferStateChangeToCallbackClients(invoice.getInvoice(),state);
+        paymentSocketIOServlet.invoiceTransferStateChanged(invoice.getInvoice(), state);
     }
 
     @Override
     public void invoicePayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        sendPayingTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
+        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
     }
 
     @Override
     public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        sendTransferTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
+        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
     }
 }
