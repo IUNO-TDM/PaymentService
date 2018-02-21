@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Socket.IO Client</title>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+    <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
+    <script>
+
+        console.log('Starting Websocket Client');
+
+        var invoice = {
+            totalAmount: 2000000,
+            referenceId: 'Brot',
+            expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
+            transfers: [{
+                address: 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
+                coin: 1000000
+            }]
+        };
+
+        var socket = io('http://localhost:8080/invoices', {
+            transports: ['websocket']
+        });
+        socket.on('connect', function(){
+            console.log('Connected');
+
+
+            var http = new XMLHttpRequest();
+            var url = "http://localhost:8080/v1/invoices";
+            http.open("POST", url, true);
+
+            //Send the proper header information along with the request
+            http.setRequestHeader("Content-type", "application/json");
+
+            http.onreadystatechange = function() {//Call a function when the state changes.
+                if(http.readyState === 4 && http.status === 201) {
+                    console.log('Invoice Created:');
+                    console.log(http.responseText);
+                    const jsonData = JSON.parse(http.responseText);
+                    socket.emit('room', jsonData['invoiceId']);
+
+                    var request = new XMLHttpRequest();
+
+                    request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
+                    request.addEventListener('load', function(event) {
+                        if (request.status >= 200 && request.status < 300) {
+                            console.log(request.responseText);
+
+                            new QRCode(document.getElementById("qrcode"), request.responseText);
+                        } else {
+                            console.warn(request.statusText, request.responseText);
+                        }
+                    });
+                    request.send();
+                }
+            };
+            http.send(JSON.stringify(invoice));
+
+        });
+        socket.on('StateChange', function(data){
+            console.log('StateChange: ' + data);
+            document.getElementById('log').innerHTML += '<br>StateChange: ';
+            document.getElementById('log').innerText += data;
+        });
+        socket.on('TransferStateChange', function(data){
+            console.log('TransferStateChange: ' + data);
+            document.getElementById('log').innerHTML += '<br>TransferStateChange: ';
+            document.getElementById('log').innerText += data;
+       });
+        socket.on('PayingTransactionsChange', function(data){
+            console.log('PayingTransactionsChange: ' + data);
+            document.getElementById('log').innerHTML += '<br>PayingTransactionsChange: ';
+            document.getElementById('log').innerText += data;
+        });
+        socket.on('TransferTransactionsChange', function(data){
+            console.log('TransferTransactionsChange: ' + data);
+            document.getElementById('log').innerHTML += '<br>TransferTransactionsChange: ';
+            document.getElementById('log').innerText += data;
+        });
+        socket.on('disconnect', function(){
+            console.log('Disconnected')
+        });
+    </script>
+
+</head>
+<body>
+<div id="qrcode"></div>
+<div id="log">...</div>
+</body>
+
+</html>
+
