@@ -31,7 +31,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        bitcoin = Bitcoin.getInstance();
 
         config.getServletContext().setAttribute(PAYMENTSERVLET, this);
 
@@ -39,54 +38,21 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
 
         of("/invoices").on(socket -> {
                 logger.info("new client connected on PaymentSocketIOServlet");
-                socket.on("room", new EventListener() {
-                    @Override
-                    public Object onEvent(String name, Object[] args, boolean ackRequested) {
-                        if (args[0].getClass().equals(String.class)) {
-                            String room = (String) args[0];
-                            socket.join(room);
-                            try {
-                                BitcoinInvoice bcInvoice = bitcoin.getBitcoinInvoiceById(UUID.fromString((String) args[0]));
-                                String jsonString = buildStateJsonString(bcInvoice.getInvoice(), bcInvoice.getState());
-                                socket.emit("StateChange", jsonString);
-
-
-                                jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(), bcInvoice.getPayingTransactions());
-                                socket.emit("PayingTransactionsChange", jsonString);
-
-                                try {
-                                    jsonString = buildStateJsonString(bcInvoice.getInvoice(), bcInvoice.getTransferState());
-                                    socket.emit("TransferStateChange", jsonString);
-                                    jsonString = buildTransactionsJsonString(bcInvoice.getInvoice(), bcInvoice.getTransferTransactions());
-                                    socket.emit("TransferTransactionsChange", jsonString);
-                                } catch (NoSuchFieldException e) {
-                                    //normal for every tx without transfers
-                                }
-
-
-                            } catch (NullPointerException e) {
-                                logger.error("The requested Invoice does not exists. Cannot send any Stateupdate at " +
-                                        "this moment...maybe later", e);
-                            } catch (SocketIOException e) {
-                                logger.error("Tried to send a first state", e);
-                            }
-                            return "OK";
-                        }
-                        return "Wrong format";
-
+                socket.on("room", (name, args, ackRequested) -> {
+                    if (args[0].getClass().equals(String.class)) {
+                        String room = (String) args[0];
+                        socket.join(room);
+                        return "OK";
                     }
+                    return "Wrong format";
+
                 });
-                socket.on("leave", new EventListener() {
-                    @Override
-                    public Object onEvent(String name, Object[] args, boolean ackRequested) {
-                        if (args[0].getClass().equals(String.class)) {
-                            socket.leave((String) args[0]);
-
-                            return "OK";
-                        }
-                        return "Wrong format";
-
+                socket.on("leave", (name, args, ackRequested) -> {
+                    if (args[0].getClass().equals(String.class)) {
+                        socket.leave((String) args[0]);
+                        return "OK";
                     }
+                    return "Wrong format";
                 });
         });
     }
