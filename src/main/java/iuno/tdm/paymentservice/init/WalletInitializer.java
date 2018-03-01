@@ -61,19 +61,19 @@ public class WalletInitializer {
             rootLogger.setLevel(Level.INFO);
             final NetworkParameters params = TestNet3Params.get();
             Context context = new Context(params);
-            String predefinedSeed = null;
+            String predefinedSeed = "";
             String passphrase = "";
             Calendar cal = Calendar.getInstance();
             cal.set(2008, 1, 1);
             long creationTime = cal.getTimeInMillis();
-            if (args.length == 2) {
+            if (args.length >= 2) {
 
                 predefinedSeed = args[1];
             }
-            if (args.length == 3) {
+            if (args.length >= 3) {
                 creationTime = Integer.parseInt(args[2]);
             }
-            if (args.length == 4) {
+            if (args.length >= 4) {
                 passphrase = args[3];
             }
             initializeWallet("PaymentService", context, true, predefinedSeed, passphrase, creationTime);
