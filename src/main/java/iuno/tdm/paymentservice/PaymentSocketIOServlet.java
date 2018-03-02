@@ -14,6 +14,8 @@ import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import io.swagger.model.TransactionsInner;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,41 +104,28 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
         }
     }
 
-
-    // TODO use Json builder https://docs.oracle.com/javaee/7/api/javax/json/JsonObjectBuilder.html
-    static String buildStateJsonString(Invoice invoice, State state) {
-        String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
-                + "\",\"referenceId\":\"" + invoice.getReferenceId()
-                + "\",\"state\":\"" + state.getState() + "\",\"depth\":" + state.getDepthInBlocks() + "}";
-        return jsonString;
+    private static String buildStateJsonString(Invoice invoice, State state) {
+        return new JSONObject()
+                .put("invoiceId", invoice.getInvoiceId())
+                .put("referenceId", invoice.getReferenceId())
+                .put("state", state.getState())
+                .put("depthInBlocks", state.getDepthInBlocks())
+                .put("depth", state.getDepthInBlocks()) // FIXME: legacy, fix in MarketplaceCore and MixerControl
+                .toString();
     }
 
-    // TODO use Json builder https://docs.oracle.com/javaee/7/api/javax/json/JsonObjectBuilder.html
-    static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
+    private static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
+        JSONObject bar = new JSONObject()
+                .put("invoiceId", invoice.getInvoiceId());
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("{\"invoiceId\":\"");
-        builder.append(invoice.getInvoiceId());
-        builder.append("\",\"transactions\":[");
-        boolean first = true;
-        for (TransactionsInner tx : transactions) {
-            if(first){
-                first = false;
-            }else {
-                builder.append(',');
-            }
-            builder.append("{\"transaction\":\"");
-            builder.append(tx.getTransactionId());
-            builder.append("\",\"state\":{\"state\":\"");
-            builder.append(tx.getState().getState());
-            builder.append("\",\"depthInBlocks\":");
-            builder.append(tx.getState().getDepthInBlocks());
-            builder.append("}}");
-        }
+        for (TransactionsInner ti : transactions)
+            bar.append("transactions", new JSONObject()
+                    .put("transaction", ti.getTransactionId())
+                    .put("state", new JSONObject()
+                            .put("state", ti.getState().getState())
+                            .put("depthInBlocks", ti.getState().getDepthInBlocks()))
+            );
 
-        builder.append("]}");
-        return builder.toString();
+        return bar.toString();
     }
-
-
 }
