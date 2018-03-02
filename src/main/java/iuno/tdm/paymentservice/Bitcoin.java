@@ -86,7 +86,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         Context.propagate(context);
 
         // read system property to check if broken wallet shall be recovered from backup automatically
-        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet").equalsIgnoreCase("true");
+        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet", "false").equalsIgnoreCase("true");
 
         // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
@@ -137,13 +137,13 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
         // 2 if there is neither a wallet nor a backup create a new one
         if (!walletFile.exists() && !backupFile.exists()) {
-            String seedCode = System.getProperty("walletSeed");
+            String seedCode = System.getProperty("walletSeed", "");
             if (seedCode.isEmpty()) {
                 wallet = new Wallet(context); // create random new wallet
             } else {
                 DeterministicSeed seed = tryCreateDeterministicSeed(seedCode,
-                        System.getProperty("walletPassphrase"),
-                        Long.parseLong(System.getProperty("walletCreationTime")));
+                        System.getProperty("walletPassphrase", ""),
+                        Long.parseLong(System.getProperty("walletCreationTime", "1504199300")));
                 if (seed == null) return;
                 wallet = Wallet.fromSeed(context.getParams(), seed);
             }
