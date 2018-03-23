@@ -28,7 +28,7 @@ import javax.validation.constraints.*;
 /**
  * Invoice
  */
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T11:48:32.147Z")
 public class Invoice   {
   @JsonProperty("totalAmount")
   private Long totalAmount = null;
@@ -37,7 +37,7 @@ public class Invoice   {
   private Date expiration = null;
 
   @JsonProperty("transfers")
-  private List<AddressValuePair> transfers = new ArrayList<AddressValuePair>();
+  private List<AddressValuePair> transfers = null;
 
   @JsonProperty("invoiceId")
   private UUID invoiceId = null;
@@ -50,10 +50,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * total amount of Satoshis that are requested to be paid
    * @return totalAmount
-  **/
+   **/
   @JsonProperty("totalAmount")
   @ApiModelProperty(value = "total amount of Satoshis that are requested to be paid")
   public Long getTotalAmount() {
@@ -69,10 +69,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * date after which this invoice is no longer valid
    * @return expiration
-  **/
+   **/
   @JsonProperty("expiration")
   @ApiModelProperty(value = "date after which this invoice is no longer valid")
   public Date getExpiration() {
@@ -89,14 +89,17 @@ public class Invoice   {
   }
 
   public Invoice addTransfersItem(AddressValuePair transfersItem) {
+    if (this.transfers == null) {
+      this.transfers = new ArrayList<AddressValuePair>();
+    }
     this.transfers.add(transfersItem);
     return this;
   }
 
-   /**
+  /**
    * array of all transfer outputs with their values
    * @return transfers
-  **/
+   **/
   @JsonProperty("transfers")
   @ApiModelProperty(value = "array of all transfer outputs with their values")
   public List<AddressValuePair> getTransfers() {
@@ -112,10 +115,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * unique id of the invoice assigned by payment service
    * @return invoiceId
-  **/
+   **/
   @JsonProperty("invoiceId")
   @ApiModelProperty(value = "unique id of the invoice assigned by payment service")
   public UUID getInvoiceId() {
@@ -131,10 +134,10 @@ public class Invoice   {
     return this;
   }
 
-   /**
+  /**
    * id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service
    * @return referenceId
-  **/
+   **/
   @JsonProperty("referenceId")
   @ApiModelProperty(value = "id defined by the client for its internal reference, which is just stored and passed but not processed by the payment service")
   public String getReferenceId() {

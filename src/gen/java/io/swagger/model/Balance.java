@@ -21,30 +21,52 @@ import io.swagger.annotations.ApiModelProperty;
 import javax.validation.constraints.*;
 
 /**
- * Coupon
+ * Balance
  */
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T11:48:32.147Z")
-public class Coupon   {
-  @JsonProperty("coupon")
-  private String coupon = null;
+public class Balance   {
+  @JsonProperty("spendable")
+  private Long spendable = null;
 
-  public Coupon coupon(String coupon) {
-    this.coupon = coupon;
+  @JsonProperty("estimated")
+  private Long estimated = null;
+
+  public Balance spendable(Long spendable) {
+    this.spendable = spendable;
     return this;
   }
 
   /**
-   * bip38 encoded bitcoin private key
-   * @return coupon
+   * value in Satoshis
+   * @return spendable
    **/
-  @JsonProperty("coupon")
-  @ApiModelProperty(value = "bip38 encoded bitcoin private key")
-  public String getCoupon() {
-    return coupon;
+  @JsonProperty("spendable")
+  @ApiModelProperty(value = "value in Satoshis")
+  public Long getSpendable() {
+    return spendable;
   }
 
-  public void setCoupon(String coupon) {
-    this.coupon = coupon;
+  public void setSpendable(Long spendable) {
+    this.spendable = spendable;
+  }
+
+  public Balance estimated(Long estimated) {
+    this.estimated = estimated;
+    return this;
+  }
+
+  /**
+   * value in Satoshis
+   * @return estimated
+   **/
+  @JsonProperty("estimated")
+  @ApiModelProperty(value = "value in Satoshis")
+  public Long getEstimated() {
+    return estimated;
+  }
+
+  public void setEstimated(Long estimated) {
+    this.estimated = estimated;
   }
 
 
@@ -56,22 +78,24 @@ public class Coupon   {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    Coupon coupon = (Coupon) o;
-    return Objects.equals(this.coupon, coupon.coupon);
+    Balance balance = (Balance) o;
+    return Objects.equals(this.spendable, balance.spendable) &&
+        Objects.equals(this.estimated, balance.estimated);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(coupon);
+    return Objects.hash(spendable, estimated);
   }
 
 
   @Override
   public String toString() {
     StringBuilder sb = new StringBuilder();
-    sb.append("class Coupon {\n");
+    sb.append("class Balance {\n");
     
-    sb.append("    coupon: ").append(toIndentedString(coupon)).append("\n");
+    sb.append("    spendable: ").append(toIndentedString(spendable)).append("\n");
+    sb.append("    estimated: ").append(toIndentedString(estimated)).append("\n");
     sb.append("}");
     return sb.toString();
   }

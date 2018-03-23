@@ -44,6 +44,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.annotation.Nullable;
+import javax.servlet.ServletContext;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -62,14 +63,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
-    private static final String PREFIX = "PaymentService";
+    public static final String PREFIX = "PaymentService";
 
     private static boolean automaticallyRecoverBrokenWallet;
 
-    private CopyOnWriteArrayList<BitcoinCallbackInterface> callbackClients = new CopyOnWriteArrayList<>();
-
     private static Bitcoin instance;
     private Context context;
+
+    private ServletContext servletContext;
+    private PaymentSocketIOServlet paymentSocketIOServlet;
 
     private HashMap<String, String> params = new HashMap<String, String>();
 
@@ -106,9 +108,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return Bitcoin.instance;
     }
 
-    public void start() { // TODO: this method must be called once only!
+    public void start(ServletContext sctx) { // TODO: this method must be called once only!
         String workDir = System.getProperty("user.home") + "/." + PREFIX;
         new File(workDir).mkdirs();
+
+        servletContext = sctx;
+
+        ServletContext socketioctx = servletContext.getContext("iuno.tdm.paymentservice.PaymentSocketIOServlet");
+
+        paymentSocketIOServlet = (PaymentSocketIOServlet) socketioctx.getAttribute(PaymentSocketIOServlet.PAYMENTSERVLET);
 
         File chainFile = new File(workDir, PREFIX + ".spvchain");
         File walletFile = new File(workDir, PREFIX + ".wallet");
@@ -314,6 +322,14 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return invoiceHashMap.get(id).getTransferTransactions();
     }
 
+    public long getEstimatedBalance(){
+        return wallet.getBalance(Wallet.BalanceType.ESTIMATED).value;
+    }
+
+    public long getSpendableBalance(){
+        return wallet.getBalance().value;
+    }
+
 
     public void deleteInvoiceById(UUID id) {
         BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
@@ -392,37 +408,19 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
     }
 
-    public void registerCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
-        callbackClients.add(callbackClient);
-    }
-
-    public void unregisterCallbackInterfaceClient(BitcoinCallbackInterface callbackClient){
-        callbackClients.remove(callbackClient);
-    }
-
     public void sendInvoiceStateChangeToCallbackClients(Invoice invoice, State state){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceStateChanged(invoice,state);
-        }
-
+        paymentSocketIOServlet.invoiceStateChanged(invoice,state);
     }
     public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceTransferStateChanged(invoice,state);
-        }
-
+        paymentSocketIOServlet.invoiceTransferStateChanged(invoice,state);
     }
 
     public void sendPayingTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoicePayingTransactionsChanged(invoice, transactions);
-        }
+        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice, transactions);
     }
 
     public void sendTransferTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        for (BitcoinCallbackInterface client:callbackClients) {
-            client.invoiceTransferTransactionsChanged(invoice, transactions);
-        }
+        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice, transactions);
     }
 
     @Override
