@@ -120,6 +120,8 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         StringBuilder builder = new StringBuilder();
         builder.append("{\"invoiceId\":\"");
         builder.append(invoice.getInvoiceId());
+        builder.append("\", \"referenceId\":\"");
+        builder.append(invoice.getReferenceId());
         builder.append("\",\"transactions\":[");
         boolean first = true;
         for (TransactionsInner tx : transactions) {
