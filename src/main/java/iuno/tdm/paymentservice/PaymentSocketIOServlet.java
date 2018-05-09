@@ -116,7 +116,8 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
 
     private static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
         JSONObject bar = new JSONObject()
-                .put("invoiceId", invoice.getInvoiceId());
+                .put("invoiceId", invoice.getInvoiceId())
+                .put("referenceId", invoice.getReferenceId());
 
         for (TransactionsInner ti : transactions)
             bar.append("transactions", new JSONObject()
