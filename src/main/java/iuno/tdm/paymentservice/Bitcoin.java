@@ -63,7 +63,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
 
-    private static final String PREFIX = "PaymentService";
+    public static final String PREFIX = "PaymentService";
 
     private static boolean automaticallyRecoverBrokenWallet;
 
