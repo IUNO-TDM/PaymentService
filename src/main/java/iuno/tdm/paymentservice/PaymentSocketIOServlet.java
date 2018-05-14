@@ -14,6 +14,8 @@ import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import io.swagger.model.TransactionsInner;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +24,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
-public class PaymentSocketIOServlet extends JettySocketIOServlet implements BitcoinCallbackInterface {
+public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooEmitter {
     public static final String PAYMENTSERVLET = "PaymentSocketIoCallback";
 
     private Logger logger;
@@ -61,7 +63,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceStateChanged(Invoice invoice, State state) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("StateChange", jsonString);
@@ -73,7 +74,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceTransferStateChanged(Invoice invoice, State state) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
@@ -85,7 +85,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildTransactionsJsonString(invoice, transactions);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
@@ -97,7 +96,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     @Override
     public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
-            //TODO find more elegant way to generate a JSON object
             String jsonString = buildTransactionsJsonString(invoice, transactions);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
@@ -106,42 +104,29 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         }
     }
 
-
-
-    static String buildStateJsonString(Invoice invoice, State state) {
-        String jsonString = "{\"invoiceId\":\"" + invoice.getInvoiceId()
-                + "\",\"referenceId\":\"" + invoice.getReferenceId()
-                + "\",\"state\":\"" + state.getState() + "\",\"depth\":" + state.getDepthInBlocks() + "}";
-        return jsonString;
+    private static String buildStateJsonString(Invoice invoice, State state) {
+        return new JSONObject()
+                .put("invoiceId", invoice.getInvoiceId())
+                .put("referenceId", invoice.getReferenceId())
+                .put("state", state.getState())
+                .put("depthInBlocks", state.getDepthInBlocks())
+                .put("depth", state.getDepthInBlocks()) // FIXME: legacy, fix in MarketplaceCore and MixerControl
+                .toString();
     }
 
-    static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
+    private static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
+        JSONObject bar = new JSONObject()
+                .put("invoiceId", invoice.getInvoiceId())
+                .put("referenceId", invoice.getReferenceId());
 
-        StringBuilder builder = new StringBuilder();
-        builder.append("{\"invoiceId\":\"");
-        builder.append(invoice.getInvoiceId());
-        builder.append("\", \"referenceId\":\"");
-        builder.append(invoice.getReferenceId());
-        builder.append("\",\"transactions\":[");
-        boolean first = true;
-        for (TransactionsInner tx : transactions) {
-            if(first){
-                first = false;
-            }else {
-                builder.append(',');
-            }
-            builder.append("{\"transaction\":\"");
-            builder.append(tx.getTransactionId());
-            builder.append("\",\"state\":{\"state\":\"");
-            builder.append(tx.getState().getState());
-            builder.append("\",\"depthInBlocks\":");
-            builder.append(tx.getState().getDepthInBlocks());
-            builder.append("}}");
-        }
+        for (TransactionsInner ti : transactions)
+            bar.append("transactions", new JSONObject()
+                    .put("transaction", ti.getTransactionId())
+                    .put("state", new JSONObject()
+                            .put("state", ti.getState().getState())
+                            .put("depthInBlocks", ti.getState().getDepthInBlocks()))
+            );
 
-        builder.append("]}");
-        return builder.toString();
+        return bar.toString();
     }
-
-
 }
