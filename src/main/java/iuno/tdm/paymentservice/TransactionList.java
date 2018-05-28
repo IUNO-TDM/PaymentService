@@ -235,7 +235,7 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     static private boolean statesAreDifferent(State state1, State state2) {
         boolean rv = false;
-        if (!state1.getState().equals(state2.getState()) || state1.getDepthInBlocks().equals(state2.getDepthInBlocks())) {
+        if (!state1.getState().equals(state2.getState()) || !state1.getDepthInBlocks().equals(state2.getDepthInBlocks())) {
             rv = true;
         }
         return rv;
