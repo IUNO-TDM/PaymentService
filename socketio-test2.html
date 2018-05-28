@@ -16,7 +16,7 @@
             expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
             transfers: [{
                 address: 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-                coin: 1000000
+                coin: 1900000
             }]
         };
 
@@ -25,7 +25,7 @@
         });
         socket.on('connect', function(){
             console.log('Connected');
-
+            document.getElementById('log').innerHTML = '';
 
             var http = new XMLHttpRequest();
             var url = "http://localhost:8080/v1/invoices";
@@ -47,7 +47,7 @@
                     request.addEventListener('load', function(event) {
                         if (request.status >= 200 && request.status < 300) {
                             console.log(request.responseText);
-
+                            document.getElementById("qrcode").innerHTML = ''
                             new QRCode(document.getElementById("qrcode"), request.responseText);
                         } else {
                             console.warn(request.statusText, request.responseText);
@@ -80,6 +80,7 @@
             document.getElementById('log').innerText += data;
         });
         socket.on('disconnect', function(){
+            document.getElementById("qrcode").innerHTML = 'disconnected'
             console.log('Disconnected')
         });
     </script>

@@ -86,7 +86,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         Context.propagate(context);
 
         // read system property to check if broken wallet shall be recovered from backup automatically
-        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet").equalsIgnoreCase("true");
+        automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet", "false").equalsIgnoreCase("true");
 
         // prepare (unused) random seed to save time when constructing coupon wallets for invoices
         byte[] seed = new byte[DeterministicSeed.DEFAULT_SEED_ENTROPY_BITS/8];
@@ -110,7 +110,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
     public void start(ServletContext sctx) { // TODO: this method must be called once only!
         String workDir = System.getProperty("user.home") + "/." + PREFIX;
-        new File(workDir).mkdirs();
+        if (!new File(workDir).mkdirs())
+            logger.error("Could not create working directory " + workDir);
 
         servletContext = sctx;
 
@@ -137,13 +138,13 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
 
         // 2 if there is neither a wallet nor a backup create a new one
         if (!walletFile.exists() && !backupFile.exists()) {
-            String seedCode = System.getProperty("walletSeed");
+            String seedCode = System.getProperty("walletSeed", "");
             if (seedCode.isEmpty()) {
                 wallet = new Wallet(context); // create random new wallet
             } else {
                 DeterministicSeed seed = tryCreateDeterministicSeed(seedCode,
-                        System.getProperty("walletPassphrase"),
-                        Long.parseLong(System.getProperty("walletCreationTime")));
+                        System.getProperty("walletPassphrase", ""),
+                        Long.parseLong(System.getProperty("walletCreationTime", "1504199300")));
                 if (seed == null) return;
                 wallet = Wallet.fromSeed(context.getParams(), seed);
             }
@@ -408,38 +409,23 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         }
     }
 
-    public void sendInvoiceStateChangeToCallbackClients(Invoice invoice, State state){
-        paymentSocketIOServlet.invoiceStateChanged(invoice,state);
-    }
-    public void sendInvoiceTransferStateChangeToCallbackClients(Invoice invoice, State state){
-        paymentSocketIOServlet.invoiceTransferStateChanged(invoice,state);
-    }
-
-    public void sendPayingTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice, transactions);
-    }
-
-    public void sendTransferTransactionsChangedToCallbackClients(Invoice invoice, Transactions transactions){
-        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice, transactions);
-    }
-
     @Override
     public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
-        sendInvoiceStateChangeToCallbackClients(invoice.getInvoice(),state);
+        paymentSocketIOServlet.invoiceStateChanged(invoice.getInvoice(), state);
     }
 
     @Override
     public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
-        sendInvoiceTransferStateChangeToCallbackClients(invoice.getInvoice(),state);
+        paymentSocketIOServlet.invoiceTransferStateChanged(invoice.getInvoice(), state);
     }
 
     @Override
     public void invoicePayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        sendPayingTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
+        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
     }
 
     @Override
     public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        sendTransferTransactionsChangedToCallbackClients(invoice.getInvoice(),transactions);
+        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
     }
 }
