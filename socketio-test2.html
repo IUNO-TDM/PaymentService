@@ -2,93 +2,83 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Socket.IO Client</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-    <script>
-
-        console.log('Starting Websocket Client');
-
-        var invoice = {
-            totalAmount: 2000000,
-            referenceId: 'Brot',
-            expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
-            transfers: [{
-                address: 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-                coin: 1900000
-            }]
-        };
-
-        var socket = io('http://localhost:8080/invoices', {
-            transports: ['websocket']
-        });
-        socket.on('connect', function(){
-            console.log('Connected');
-            document.getElementById('log').innerHTML = '';
-
-            var http = new XMLHttpRequest();
-            var url = "http://localhost:8080/v1/invoices";
-            http.open("POST", url, true);
-
-            //Send the proper header information along with the request
-            http.setRequestHeader("Content-type", "application/json");
-
-            http.onreadystatechange = function() {//Call a function when the state changes.
-                if(http.readyState === 4 && http.status === 201) {
-                    console.log('Invoice Created:');
-                    console.log(http.responseText);
-                    const jsonData = JSON.parse(http.responseText);
-                    socket.emit('room', jsonData['invoiceId']);
-
-                    var request = new XMLHttpRequest();
-
-                    request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
-                    request.addEventListener('load', function(event) {
-                        if (request.status >= 200 && request.status < 300) {
-                            console.log(request.responseText);
-                            document.getElementById("qrcode").innerHTML = ''
-                            new QRCode(document.getElementById("qrcode"), request.responseText);
-                        } else {
-                            console.warn(request.statusText, request.responseText);
-                        }
-                    });
-                    request.send();
-                }
-            };
-            http.send(JSON.stringify(invoice));
-
-        });
-        socket.on('StateChange', function(data){
-            console.log('StateChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>StateChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('TransferStateChange', function(data){
-            console.log('TransferStateChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>TransferStateChange: ';
-            document.getElementById('log').innerText += data;
-       });
-        socket.on('PayingTransactionsChange', function(data){
-            console.log('PayingTransactionsChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>PayingTransactionsChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('TransferTransactionsChange', function(data){
-            console.log('TransferTransactionsChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>TransferTransactionsChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('disconnect', function(){
-            document.getElementById("qrcode").innerHTML = 'disconnected'
-            console.log('Disconnected')
-        });
-    </script>
+    <script src="socketio-test.js"></script>
 
 </head>
 <body>
-<div id="qrcode"></div>
-<div id="log">...</div>
+<div class="jumbotron text-center bg-primary" style="margin-bottom:0">
+    <h1>Payment Service Socket.IO Testpage</h1>
+    <p>Pay the invoice and see the transaction propagate through the bitcoin network.</p>
+</div>
+
+<div class="container">
+    <h1>Invoice</h1>
+    <p>Pay this bip21 bitcoin invoice.</p>
+    <div class="row">
+        <div class="col-lg-3">
+            <h2>bip21 code</h2>
+            <div id="qrcode"></div>
+        </div>
+        <div class="col-lg-9">
+            <div class="container-fluid">
+
+                <h2>invoice</h2>
+                <div class="row">
+                    <div class="col-sm-3">Invoice ID:</div><div class="col-sm-9" id="invoiceId">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">Reference ID:</div><div class="col-sm-9" id="referenceId">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">Bip21</div><div class="col-sm-9" id="bip21">n/a</div>
+                </div>
+
+                <h3>paying transaction</h3>
+                <div class="row">
+                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p.txid">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">State:</div><div class="col-sm-9" id="p.state">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="p.depthInBlocks">n/a</div>
+                </div>
+
+                <h3>transfer transaction</h3>
+                <div class="row">
+                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t.txid">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">State:</div><div class="col-sm-9" id="t.state">n/a</div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="t.depthInBlocks">n/a</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <h1>Log</h1>
+    <div id="log">...</div>
+</div>
+
+<div class="jumbotron text-center bg-secondary" style="margin-bottom:0">
+    <p>Footer</p>
+</div>
+
 </body>
 
 </html>
