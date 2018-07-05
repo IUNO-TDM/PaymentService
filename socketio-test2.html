@@ -33,6 +33,10 @@
             <div class="container-fluid">
 
                 <h2>invoice</h2>
+                <div class="progress">
+                    <div class="progress-bar bg-success" style="width:0%" id="testbar"></div>
+                </div>
+
                 <div class="row">
                     <div class="col-sm-3">Invoice ID:</div><div class="col-sm-9" id="invoiceId">n/a</div>
                 </div>
@@ -43,28 +47,41 @@
                     <div class="col-sm-3">Bip21</div><div class="col-sm-9" id="bip21">n/a</div>
                 </div>
 
-                <h3>paying transaction</h3>
-                <div class="row">
-                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p.txid">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">State:</div><div class="col-sm-9" id="p.state">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="p.depthInBlocks">n/a</div>
-                </div>
-
-                <h3>transfer transaction</h3>
-                <div class="row">
-                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t.txid">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">State:</div><div class="col-sm-9" id="t.state">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="t.depthInBlocks">n/a</div>
+                <div id="paytx">
+                    <h3>paying transaction</h3>
+                    <div class="row">
+                        <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p-txid">n/a</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">State:</div><div class="col-sm-3" id="p-state">n/a</div>
+                        <div class="col-sm-6">
+                            <div class="progress" id="p-prog">
+                                <div class="progress-bar bg-success" style="width:0%" id="p-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="p-depthInBlocks">n/a</div>
+                    </div>
                 </div>
 
+                <div id="transfertx">
+                    <h3>transfer transaction</h3>
+                    <div class="row">
+                        <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t-txid">n/a</div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">State:</div><div class="col-sm-3" id="t-state">n/a</div>
+                        <div class="col-sm-6">
+                            <div class="progress" id="t-prog">
+                                <div class="progress-bar bg-success" style="width:0%" id="t-bar"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="t-depthInBlocks">n/a</div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

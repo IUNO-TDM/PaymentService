@@ -59,30 +59,33 @@
             const jd = JSON.parse(data);
             document.getElementById('qrcode').innerHTML = jd.state;
             document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-            document.getElementById('p.depthInBlocks').innerHTML = jd.depthInBlocks;
-            document.getElementById('p.state').innerHTML = jd.state;
+            document.getElementById('p-depthInBlocks').innerHTML = jd.depthInBlocks;
+            document.getElementById('p-state').innerHTML = jd.state;
+            document.getElementById('p-bar').style.width = jd.depthInBlocks/6*100 + '%';
+            document.getElementById('testbar').style.width = jd.depthInBlocks/6*100 + '%';
         });
 
         socket.on('TransferStateChange', function(data){
             console.log('TransferStateChange: ' + data);
             const jd = JSON.parse(data);
             document.getElementById('log').innerHTML = 'TransferStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-            document.getElementById('t.depthInBlocks').innerHTML = jd.depthInBlocks;
-            document.getElementById('t.state').innerHTML = jd.state;
+            document.getElementById('t-depthInBlocks').innerHTML = jd.depthInBlocks;
+            document.getElementById('t-state').innerHTML = jd.state;
+            document.getElementById('t-bar').style.width = jd.depthInBlocks/6*100 + '%';
         });
 
         socket.on('PayingTransactionsChange', function(data){
             console.log('PayingTransactionsChange: ' + data);
             const jd = JSON.parse(data);
             document.getElementById('log').innerHTML = 'PayingTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-            document.getElementById('p.txid').innerHTML = jd.transactions[0].transaction;
+            document.getElementById('p-txid').innerHTML = jd.transactions[0].transaction;
         });
 
         socket.on('TransferTransactionsChange', function(data){
             console.log('TransferTransactionsChange: ' + data);
             const jd = JSON.parse(data);
             document.getElementById('log').innerHTML = 'TransferTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-            document.getElementById('t.txid').innerHTML = jd.transactions[0].transaction;
+            document.getElementById('t-txid').innerHTML = jd.transactions[0].transaction;
         });
 
         socket.on('disconnect', function(){
