@@ -55,9 +55,28 @@ socket.on('connect', function(){
 });
 
 function stateChange(txPrefix, data){
-    document.getElementById(txPrefix+'depthInBlocks').innerHTML = data.depthInBlocks;
     document.getElementById(txPrefix+'state').innerHTML = data.state;
-    document.getElementById(txPrefix+'bar').style.width = data.depthInBlocks/6*100 + '%';
+    var barElement = document.getElementById(txPrefix+'bar');
+
+    var depthInBlocks = data.depthInBlocks;
+
+    if ('pending' == data.state) {
+        var seenByPeers = (2147483648 + depthInBlocks); // TODO use "seen by peers"
+        barElement.style.width = seenByPeers + '%';
+        document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
+        document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
+
+    } else if ('building' == data.state) {
+        document.getElementById(txPrefix+'confidence').innerHTML = "Depth in blocks:";
+        document.getElementById(txPrefix+'confidenceV').innerHTML = data.depthInBlocks;
+        barElement.classList.add('bg-success');
+        barElement.classList.remove('bg-warning');
+        barElement.style.width = depthInBlocks/6*100 + '%';
+
+    } else {
+        document.getElementById(txPrefix+'confidence').innerHTML = "Confidence:";
+        document.getElementById(txPrefix+'confidenceV').innerHTML = "n/a";
+    }
 }
 
 socket.on('StateChange', function(data){
@@ -68,7 +87,7 @@ socket.on('StateChange', function(data){
 
     stateChange('p-', jd);
 
-    document.getElementById('testbar').style.width = jd.depthInBlocks/6*100 + '%';
+    document.getElementById('progressbar').style.width = jd.depthInBlocks/6*100 + '%';
 });
 
 socket.on('TransferStateChange', function(data){

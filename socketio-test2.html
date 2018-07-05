@@ -25,60 +25,59 @@
     <h1>Invoice</h1>
     <p>Pay this bip21 bitcoin invoice.</p>
     <div class="row">
-        <div class="col-lg-3">
+        <div class="col-lg-4">
             <h2>bip21 code</h2>
             <div id="qrcode"></div>
         </div>
-        <div class="col-lg-9">
-            <div class="container-fluid">
+        <div class="col-lg-8 container-fluid">
 
-                <h2>invoice</h2>
-                <div class="progress">
-                    <div class="progress-bar bg-success" style="width:0%" id="testbar"></div>
-                </div>
+            <h2>invoice</h2>
+            <div class="progress">
+                <div class="progress-bar bg-success" style="width:0%" id="progressbar"></div>
+            </div>
 
-                <div class="row">
-                    <div class="col-sm-3">Invoice ID:</div><div class="col-sm-9" id="invoiceId">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Reference ID:</div><div class="col-sm-9" id="referenceId">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Bip21</div><div class="col-sm-9" id="bip21">n/a</div>
-                </div>
+            <div class="row">
+                <div class="col-sm-3">Invoice ID:</div><div class="col-sm-9" id="invoiceId">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">Reference ID:</div><div class="col-sm-9" id="referenceId">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">Bip21</div><div class="col-sm-9" id="bip21">n/a</div>
+            </div>
 
-                <h3>paying transaction</h3>
-                <div class="row">
-                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p-txid">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">State:</div><div class="col-sm-3" id="p-state">n/a</div>
-                    <div class="col-sm-6">
-                        <div class="progress" id="p-prog">
-                            <div class="progress-bar bg-success" style="width:0%" id="p-bar"></div>
-                        </div>
+            <h3>paying transaction</h3>
+            <div class="row">
+                <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p-txid">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">State:</div><div class="col-sm-2" id="p-state">n/a</div>
+                <div class="col-sm-7">
+                    <div class="progress" id="p-prog">
+                        <div class="progress-bar bg-warning" style="width:0%" id="p-bar"></div>
                     </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="p-depthInBlocks">n/a</div>
-                </div>
-
-                <h3>transfer transaction</h3>
-                <div class="row">
-                    <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t-txid">n/a</div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">State:</div><div class="col-sm-3" id="t-state">n/a</div>
-                    <div class="col-sm-6">
-                        <div class="progress" id="t-prog">
-                            <div class="progress-bar bg-success" style="width:0%" id="t-bar"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-3">Depth in blocks:</div><div class="col-sm-9" id="t-depthInBlocks">n/a</div>
                 </div>
             </div>
+            <div class="row">
+                <div class="col-sm-3" id="p-confidence">Confidence:</div><div class="col-sm-9" id="p-confidenceV">n/a</div>
+            </div>
+
+            <h3>transfer transaction</h3>
+            <div class="row">
+                <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t-txid">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">State:</div><div class="col-sm-2" id="t-state">n/a</div>
+                <div class="col-sm-7">
+                    <div class="progress" id="t-prog">
+                        <div class="progress-bar bg-warning" style="width:0%" id="t-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3" id="t-confidence">Confidence:</div><div class="col-sm-9" id="t-confidenceV">n/a</div>
+            </div>
+
         </div>
     </div>
 </div>
@@ -89,7 +88,7 @@
 </div>
 
 <div class="jumbotron text-center bg-secondary" style="margin-bottom:0">
-    <p>Footer</p>
+    <p>Donate to: <a href="bitcoin:197LCjFHvE1P7WoyazMyZ81F4qGh7BPgoj">197LCjFHvE1P7WoyazMyZ81F4qGh7BPgoj</a> </p>
 </div>
 
 </body>
