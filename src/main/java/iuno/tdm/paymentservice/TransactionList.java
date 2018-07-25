@@ -232,7 +232,10 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     static private boolean statesAreDifferent(State state1, State state2) {
         boolean rv = false;
-        if (!state1.getState().equals(state2.getState()) || !state1.getDepthInBlocks().equals(state2.getDepthInBlocks())) {
+        if (!state1.getState().equals(state2.getState())
+                || !state1.getDepthInBlocks().equals(state2.getDepthInBlocks())
+                || !state1.getSeenByPeers().equals(state2.getSeenByPeers())
+                ) {
             rv = true;
         }
         return rv;
@@ -240,26 +243,27 @@ public class TransactionList implements TransactionConfidence.Listener {
 
     static private boolean transactionsAreDifferent(Transactions transactions1, Transactions transactions2) {
         boolean rv = false;
-        if (transactions1 == null ^ transactions2 == null) {
+        if (transactions1 == null || transactions2 == null) {
             rv = true;
-        } else if (transactions1 != null && transactions2 != null) {
-            if (transactions1.size() != transactions2.size()) {
-                rv = true;
-            } else {
-                boolean noMatch = false;
-                for (TransactionsInner tx1 : transactions1) {
-                    noMatch = true;
-                    for (TransactionsInner tx2 : transactions2) {
-                        if (tx1.getTransactionId().equals(tx2.getTransactionId()) && !statesAreDifferent(tx1.getState(), tx2.getState())) {
-                            noMatch = false;
-                            break;
-                        }
-                    }
-                    if (noMatch) {
-                        rv = true;
+
+        } else if (transactions1.size() != transactions2.size()) {
+            rv = true;
+
+        } else {
+            boolean noMatch = false;
+            for (TransactionsInner tx1 : transactions1) {
+                noMatch = true;
+                for (TransactionsInner tx2 : transactions2) {
+                    if (tx1.getTransactionId().equals(tx2.getTransactionId()) && !statesAreDifferent(tx1.getState(), tx2.getState())) {
+                        noMatch = false;
                         break;
                     }
                 }
+                if (noMatch) {
+                    rv = true;
+                    break;
+                }
+
             }
         }
         return rv;
@@ -297,6 +301,7 @@ public class TransactionList implements TransactionConfidence.Listener {
             lastState = mapConfidenceToState(confidence);
             lastMostConfidentTxHash = confidence.getTransactionHash();
             refreshNeeded = true;
+
         } else {
             TransactionConfidence newMostConfidentConfidence = tryDetermineMostConfidentTransaction().getConfidence();
             State newState = mapConfidenceToState(newMostConfidentConfidence);
