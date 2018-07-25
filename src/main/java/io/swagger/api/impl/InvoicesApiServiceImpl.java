@@ -1,7 +1,6 @@
 package io.swagger.api.impl;
 
 import io.swagger.api.*;
-import io.swagger.model.*;
 
 import io.swagger.model.AddressValuePair;
 import io.swagger.model.Coupon;
@@ -19,7 +18,6 @@ import java.util.UUID;
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
-
 import org.bitcoinj.core.AddressFormatException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -29,7 +27,7 @@ import iuno.tdm.paymentservice.Bitcoin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2017-04-28T09:16:10.842Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-07-25T13:00:10.686Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
     private static final Logger logger = LoggerFactory.getLogger(Bitcoin.class);
 

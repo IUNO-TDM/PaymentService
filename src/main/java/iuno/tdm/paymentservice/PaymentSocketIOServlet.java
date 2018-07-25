@@ -110,6 +110,7 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
                 .put("referenceId", invoice.getReferenceId())
                 .put("state", state.getState())
                 .put("depthInBlocks", state.getDepthInBlocks())
+                .put("seenByPeers", state.getSeenByPeers())
                 .put("depth", state.getDepthInBlocks()) // FIXME: legacy, fix in MarketplaceCore and MixerControl
                 .toString();
     }
@@ -124,7 +125,8 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
                     .put("transaction", ti.getTransactionId())
                     .put("state", new JSONObject()
                             .put("state", ti.getState().getState())
-                            .put("depthInBlocks", ti.getState().getDepthInBlocks()))
+                            .put("depthInBlocks", ti.getState().getDepthInBlocks())
+                            .put("seenByPeers", ti.getState().getSeenByPeers()))
             );
 
         return bar.toString();

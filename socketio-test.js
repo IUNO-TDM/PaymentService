@@ -1,12 +1,12 @@
 console.log('Starting Websocket Client');
 
 var invoice = {
-    totalAmount: 100000000,
+    totalAmount: 10000000,
     referenceId: 'Brot',
     expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
     transfers: [{
         address: pubkeys[Math.floor(Math.random()*pubkeys.length)] || 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-        coin: 99900000
+        coin: 4990000
     }]
 };
 
@@ -113,10 +113,10 @@ function stateChange(txPrefix, data){
     var barElement = document.getElementById(txPrefix+'bar');
 
     var depthInBlocks = data.depthInBlocks;
+    var seenByPeers = data.seenByPeers;
 
     if ('pending' == data.state) {
         if ("p-" == txPrefix) showWaitMark();
-        var seenByPeers = (2147483648 + depthInBlocks); // TODO use "seen by peers"
         barElement.style.width = seenByPeers + '%';
         document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
@@ -124,7 +124,7 @@ function stateChange(txPrefix, data){
     } else if ('building' == data.state) {
         if ("p-" == txPrefix) showCheckMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Depth in blocks:";
-        document.getElementById(txPrefix+'confidenceV').innerHTML = data.depthInBlocks;
+        document.getElementById(txPrefix+'confidenceV').innerHTML = depthInBlocks;
         barElement.classList.add('bg-success');
         barElement.classList.remove('bg-warning');
         barElement.style.width = depthInBlocks/6*100 + '%';

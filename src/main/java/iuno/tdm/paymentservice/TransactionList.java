@@ -206,24 +206,21 @@ public class TransactionList implements TransactionConfidence.Listener {
     static private State mapConfidenceToState(TransactionConfidence confidence) {
         State result = new State();
         result.setState(State.StateEnum.UNKNOWN);
-        result.setDepthInBlocks(Integer.MIN_VALUE);
+        result.setDepthInBlocks(confidence.getDepthInBlocks());
+        result.setSeenByPeers(confidence.numBroadcastPeers());
         if (confidence != null) {
             switch (confidence.getConfidenceType()) {
                 case BUILDING:
                     result.setState(State.StateEnum.BUILDING);
-                    result.setDepthInBlocks(confidence.getDepthInBlocks());
                     break;
                 case PENDING:
                     result.setState(State.StateEnum.PENDING);
-                    result.setDepthInBlocks(Integer.MIN_VALUE + confidence.numBroadcastPeers());
                     break;
                 case DEAD:
                     result.setState(State.StateEnum.DEAD);
-                    result.setDepthInBlocks(Integer.MIN_VALUE);
                     break;
                 case IN_CONFLICT:
                     result.setState(State.StateEnum.CONFLICT);
-                    result.setDepthInBlocks(Integer.MIN_VALUE);
                     break;
                 case UNKNOWN:
                 default:
