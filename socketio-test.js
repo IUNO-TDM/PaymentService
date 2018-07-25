@@ -5,7 +5,7 @@ var invoice = {
     referenceId: 'Brot',
     expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
     transfers: [{
-        address: 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
+        address: pubkeys[Math.floor(Math.random()*pubkeys.length)] || 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
         coin: 99900000
     }]
 };
