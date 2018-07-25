@@ -68,6 +68,10 @@
                             <name>walletCreationTime</name>
                             <value>${walletCreationTime}</value>
                         </systemProperty>
+                        <systemProperty>
+                            <name>savingsAddress</name>
+                            <value>${savingsAddress}</value>
+                        </systemProperty>
                     </systemProperties>
                 </configuration>
                 <executions>
@@ -240,5 +244,6 @@
         <walletSeed>never,use,this,seed,never,use,this,seed,never,use,this,seed</walletSeed>
         <walletPassphrase/>
         <walletCreationTime>1504199300</walletCreationTime>
+        <savingsAddress>mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8</savingsAddress>
     </properties>
 </project>

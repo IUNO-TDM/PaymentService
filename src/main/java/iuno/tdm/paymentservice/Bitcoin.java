@@ -255,14 +255,15 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     }
 
     public void stop() {
-        SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), "mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8"));
+        String savingsAddress = System.getProperty("savingsAddress", "");
         try
         {
+            SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), savingsAddress));
             wallet.completeTx(sr);
             wallet.commitTx(sr.tx);
             peerGroup.broadcastTransaction(sr.tx)
                     .broadcast();
-        } catch (InsufficientMoneyException m) {
+        } catch (Exception e) {
             // do nothing
         }
 
