@@ -2,96 +2,143 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Socket.IO Client</title>
+
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css">
+    <link rel="stylesheet" type="text/css" href="socketio-test.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js"></script>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
     <script src="https://cdn.rawgit.com/davidshimjs/qrcodejs/gh-pages/qrcode.min.js"></script>
-    <script>
-
-        console.log('Starting Websocket Client');
-
-        var invoice = {
-            totalAmount: 2000000,
-            referenceId: 'Wurst',
-            expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
-            transfers: [{
-                address: 'mi7RyP4PUc1TRaUCMo8yyY6FxGQ5C5S1yp',
-                coin: 1000000
-            }, {
-                address: 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-                coin:  900000
-            }]
-        };
-
-        var socket = io('http://localhost:8080/invoices', {
-            transports: ['websocket']
-        });
-        socket.on('connect', function(){
-            console.log('Connected');
-            document.getElementById('log').innerHTML = '';
-
-            var http = new XMLHttpRequest();
-            var url = "http://localhost:8080/v1/invoices";
-            http.open("POST", url, true);
-
-            //Send the proper header information along with the request
-            http.setRequestHeader("Content-type", "application/json");
-
-            http.onreadystatechange = function() {//Call a function when the state changes.
-                if(http.readyState === 4 && http.status === 201) {
-                    console.log('Invoice Created:');
-                    console.log(http.responseText);
-                    const jsonData = JSON.parse(http.responseText);
-                    socket.emit('room', jsonData['invoiceId']);
-
-                    var request = new XMLHttpRequest();
-
-                    request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
-                    request.addEventListener('load', function(event) {
-                        if (request.status >= 200 && request.status < 300) {
-                            console.log(request.responseText);
-                            document.getElementById("qrcode").innerHTML = ''
-                            new QRCode(document.getElementById("qrcode"), request.responseText);
-                        } else {
-                            console.warn(request.statusText, request.responseText);
-                        }
-                    });
-                    request.send();
-                }
-            };
-            http.send(JSON.stringify(invoice));
-
-        });
-        socket.on('StateChange', function(data){
-            console.log('StateChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>StateChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('TransferStateChange', function(data){
-            console.log('TransferStateChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>TransferStateChange: ';
-            document.getElementById('log').innerText += data;
-       });
-        socket.on('PayingTransactionsChange', function(data){
-            console.log('PayingTransactionsChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>PayingTransactionsChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('TransferTransactionsChange', function(data){
-            console.log('TransferTransactionsChange: ' + data);
-            document.getElementById('log').innerHTML += '<br>TransferTransactionsChange: ';
-            document.getElementById('log').innerText += data;
-        });
-        socket.on('disconnect', function(){
-           document.getElementById("qrcode").innerHTML = 'disconnected'
-           console.log('Disconnected')
-        });
-    </script>
-
+    <script src="pubkeys.js"></script>
+    <script src="socketio-test.js"></script>
 </head>
 <body>
-<div id="qrcode"></div>
-<div id="log">...</div>
+<div class="jumbotron text-center bg-primary" style="margin-bottom:0">
+    <h1>Payment Service Socket.IO Testpage</h1>
+    <p>Pay the invoice and see the transaction propagate through the bitcoin network.</p>
+</div>
+
+<div class="container">
+    <h1>Invoice</h1>
+    <p>Pay this bip21 bitcoin invoice.</p>
+    <div class="row">
+        <div class="col-lg-4">
+            <h2>bip21 code</h2>
+            <div id="qrcode" style="display:none"></div>
+            <!-- https://codepen.io/anon/pen/GGadJB -->
+            <div id="waitmark" style="display:none">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130.2 130.2">
+                    <circle class="path circle" fill="none" stroke="#e8bf6a" stroke-width="6" stroke-miterlimit="10" cx="65.1" cy="65.1" r="62.1"/>
+                    <line class="path line" fill="none" stroke="#e8bf6a" stroke-width="6" stroke-linecap="round" stroke-miterlimit="10" x1="49.4" y1="37.9" x2="49.4" y2="92.3"/>
+                    <line class="path line" fill="none" stroke="#e8bf6a" stroke-width="6" stroke-linecap="round" stroke-miterlimit="10" x1="80.8" y1="38" x2="80.8" y2="92.2"/>
+                </svg>
+            </div>
+            <div id="checkmark" style="display:none">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130.2 130.2">
+                    <circle class="path circle" fill="none" stroke="#73AF55" stroke-width="6" stroke-miterlimit="10" cx="65.1" cy="65.1" r="62.1"/>
+                    <polyline class="path check" fill="none" stroke="#73AF55" stroke-width="6" stroke-linecap="round" stroke-miterlimit="10" points="100.2,40.2 51.5,88.8 29.8,67.5 "/>
+                </svg>
+            </div>
+            <div id="failmark" style="display:block">
+                <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 130.2 130.2">
+                    <circle class="path circle" fill="none" stroke="#D06079" stroke-width="6" stroke-miterlimit="10" cx="65.1" cy="65.1" r="62.1"/>
+                    <line class="path line" fill="none" stroke="#D06079" stroke-width="6" stroke-linecap="round" stroke-miterlimit="10" x1="34.4" y1="37.9" x2="95.8" y2="92.3"/>
+                    <line class="path line" fill="none" stroke="#D06079" stroke-width="6" stroke-linecap="round" stroke-miterlimit="10" x1="95.8" y1="38" x2="34.4" y2="92.2"/>
+                </svg>
+            </div>
+        </div>
+        <div class="col-lg-8 container-fluid">
+
+            <h2>invoice</h2>
+            <div class="progress">
+                <div class="progress-bar bg-success" style="width:0%" id="progressbar"></div>
+            </div>
+
+            <div class="row">
+                <div class="col-sm-3">Invoice ID:</div><div class="col-sm-9" id="invoiceId">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">Reference ID:</div><div class="col-sm-9" id="referenceId">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">Bip21</div><div class="col-sm-9" id="bip21">n/a</div>
+            </div>
+
+            <h3>paying transaction</h3>
+            <div class="row">
+                <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="p-txid">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">State:</div><div class="col-sm-2" id="p-state">n/a</div>
+                <div class="col-sm-7">
+                    <div class="progress" id="p-prog">
+                        <div class="progress-bar bg-warning" style="width:0%" id="p-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3" id="p-confidence">Confidence:</div><div class="col-sm-9" id="p-confidenceV">n/a</div>
+            </div>
+
+            <h3>transfer transaction</h3>
+            <div class="row">
+                <div class="col-sm-3">Transaction ID:</div><div class="col-sm-9" id="t-txid">n/a</div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3">State:</div><div class="col-sm-2" id="t-state">n/a</div>
+                <div class="col-sm-7">
+                    <div class="progress" id="t-prog">
+                        <div class="progress-bar bg-warning" style="width:0%" id="t-bar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-sm-3" id="t-confidence">Confidence:</div><div class="col-sm-9" id="t-confidenceV">n/a</div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <h1>debug information</h1>
+    <h2>invoice</h2>
+    <pre><code id="invoice"></code></pre>
+    <h2>status objects</h2>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>State Change</h3>
+            <pre><code id="StateChange"></code></pre>
+        </div>
+        <div class="col-lg-6">
+            <h3>PayingTransactions Change</h3>
+            <pre><code id="PayingTransactionsChange"></code></pre>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-lg-6">
+            <h3>TransferState Change</h3>
+            <pre><code id="TransferStateChange"></code></pre>
+        </div>
+        <div class="col-lg-6">
+            <h3>TransferTransactions Change</h3>
+            <pre><code id="TransferTransactionsChange"></code></pre>
+        </div>
+    </div>
+
+    <h2>event log</h2>
+    <div id="log">...</div>
+</div>
+
+<div class="jumbotron text-center bg-secondary" style="margin-bottom:0">
+    <p>Donate to: <a href="bitcoin:197LCjFHvE1P7WoyazMyZ81F4qGh7BPgoj">197LCjFHvE1P7WoyazMyZ81F4qGh7BPgoj</a> </p>
+</div>
+
 </body>
 
 </html>
