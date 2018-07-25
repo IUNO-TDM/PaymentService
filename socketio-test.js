@@ -10,6 +10,31 @@ var invoice = {
     }]
 };
 
+// http://jsfiddle.net/unLSJ/1309/
+if (!library)
+   var library = {};
+
+library.json = {
+   replacer: function(match, pIndent, pKey, pVal, pEnd) {
+      var key = '<span class=json-key>';
+      var val = '<span class=json-value>';
+      var str = '<span class=json-string>';
+      var r = pIndent || '';
+      if (pKey)
+         r = r + key + pKey.replace(/[": ]/g, '') + '</span>: ';
+      if (pVal)
+         r = r + (pVal[0] == '"' ? str : val) + pVal + '</span>';
+      return r + (pEnd || '');
+      },
+   prettyPrint: function(obj) {
+      var jsonLine = /^( *)("[\w]+": )?("[^"]*"|[\w.+-]*)?([,[{])?$/mg;
+      return JSON.stringify(obj, null, 3)
+         .replace(/&/g, '&amp;').replace(/\\"/g, '&quot;')
+         .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+         .replace(jsonLine, library.json.replacer);
+      }
+   };
+
 function hideAll() {
     document.getElementById("checkmark").style.display="none";
     document.getElementById("waitmark").style.display="none";
@@ -42,6 +67,7 @@ function showFailMark() {
 var socket = io('http://localhost:8080/invoices', {
     transports: ['websocket']
 });
+
 socket.on('connect', function(){
     console.log('Connected');
     document.getElementById('log').innerHTML = 'connected';
@@ -89,12 +115,14 @@ function stateChange(txPrefix, data){
     var depthInBlocks = data.depthInBlocks;
 
     if ('pending' == data.state) {
+        if ("p-" == txPrefix) showWaitMark();
         var seenByPeers = (2147483648 + depthInBlocks); // TODO use "seen by peers"
         barElement.style.width = seenByPeers + '%';
         document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
 
     } else if ('building' == data.state) {
+        if ("p-" == txPrefix) showCheckMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Depth in blocks:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = data.depthInBlocks;
         barElement.classList.add('bg-success');
@@ -102,6 +130,7 @@ function stateChange(txPrefix, data){
         barElement.style.width = depthInBlocks/6*100 + '%';
 
     } else {
+        if ("p-" == txPrefix) showFailMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Confidence:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = "n/a";
     }
@@ -110,8 +139,8 @@ function stateChange(txPrefix, data){
 socket.on('StateChange', function(data){
     console.log('StateChange: ' + data);
     const jd = JSON.parse(data);
-    showCheckMark();
     document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
+    $('#StateChange').html(library.json.prettyPrint(jd));
 
     stateChange('p-', jd);
 
@@ -122,14 +151,16 @@ socket.on('TransferStateChange', function(data){
     console.log('TransferStateChange: ' + data);
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'TransferStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
+    $('#TransferStateChange').html(library.json.prettyPrint(jd));
     stateChange('t-', jd);
 });
 
 socket.on('PayingTransactionsChange', function(data){
     console.log('PayingTransactionsChange: ' + data);
     const jd = JSON.parse(data);
-    document.getElementById('log').innerHTML = 'PayingTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
+    document.getElementById('log').innerHTML = 'PayingTransactionsChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     document.getElementById('p-txid').innerHTML = jd.transactions[0].transaction;
+    $('#PayingTransactionsChange').html(library.json.prettyPrint(jd));
 });
 
 socket.on('TransferTransactionsChange', function(data){
@@ -137,6 +168,7 @@ socket.on('TransferTransactionsChange', function(data){
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'TransferTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     document.getElementById('t-txid').innerHTML = jd.transactions[0].transaction;
+    $('#TransferTransactionsChange').html(library.json.prettyPrint(jd));
 });
 
 socket.on('disconnect', function(){
