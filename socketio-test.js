@@ -160,7 +160,8 @@ socket.on('PayingTransactionsChange', function(data){
     console.log('PayingTransactionsChange: ' + data);
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'PayingTransactionsChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    document.getElementById('p-txid').innerHTML = jd.transactions[0].transaction;
+    var txid=jd.transactions[0].transaction;
+    document.getElementById('p-txid').innerHTML = '<a href="https://www.blocktrail.com/tBTC/tx/' + txid + '">' + txid + '</a>';
     $('#PayingTransactionsChange').html(library.json.prettyPrint(jd));
 });
 
@@ -168,7 +169,8 @@ socket.on('TransferTransactionsChange', function(data){
     console.log('TransferTransactionsChange: ' + data);
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'TransferTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    document.getElementById('t-txid').innerHTML = jd.transactions[0].transaction;
+    var txid=jd.transactions[0].transaction;
+    document.getElementById('t-txid').innerHTML = '<a href="https://www.blocktrail.com/tBTC/tx/' + txid + '">' + txid + '</a>';
     $('#TransferTransactionsChange').html(library.json.prettyPrint(jd));
 });
 
