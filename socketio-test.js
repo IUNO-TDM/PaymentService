@@ -10,6 +10,35 @@ var invoice = {
     }]
 };
 
+function hideAll() {
+    document.getElementById("checkmark").style.display="none";
+    document.getElementById("waitmark").style.display="none";
+    document.getElementById("failmark").style.display="none";
+    document.getElementById("qrcode").style.display="none";
+}
+
+function showQRCode(qrCode) {
+    document.getElementById("qrcode").innerHTML = '';
+    new QRCode(document.getElementById("qrcode"), qrCode);
+    hideAll();
+    document.getElementById("qrcode").style.display="block";
+}
+
+function showCheckMark() {
+    hideAll();
+    document.getElementById("checkmark").style.display="block";
+}
+
+function showWaitMark() {
+    hideAll();
+    document.getElementById("waitmark").style.display="block";
+}
+
+function showFailMark() {
+    hideAll();
+    document.getElementById("failmark").style.display="block";
+}
+
 var socket = io('http://localhost:8080/invoices', {
     transports: ['websocket']
 });
@@ -39,8 +68,7 @@ socket.on('connect', function(){
             request.addEventListener('load', function(event) {
                 if (request.status >= 200 && request.status < 300) {
                     console.log(request.responseText);
-                    document.getElementById("qrcode").innerHTML = '';
-                    new QRCode(document.getElementById("qrcode"), request.responseText);
+                    showQRCode(request.responseText);
                     document.getElementById("bip21").innerHTML=request.responseText;
                 } else {
                     console.warn(request.statusText, request.responseText);
@@ -82,7 +110,7 @@ function stateChange(txPrefix, data){
 socket.on('StateChange', function(data){
     console.log('StateChange: ' + data);
     const jd = JSON.parse(data);
-    document.getElementById('qrcode').innerHTML = jd.state;
+    showCheckMark();
     document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
 
     stateChange('p-', jd);
@@ -112,6 +140,6 @@ socket.on('TransferTransactionsChange', function(data){
 });
 
 socket.on('disconnect', function(){
-    document.getElementById("qrcode").innerHTML = 'disconnected'
+    showFailMark();
     console.log('Disconnected')
 });
