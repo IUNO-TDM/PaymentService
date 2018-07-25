@@ -86,10 +86,10 @@ socket.on('connect', function(){
             const jsonData = JSON.parse(http.responseText);
             socket.emit('room', jsonData['invoiceId']);
 
+            $('#invoice').html(library.json.prettyPrint(jsonData));
             document.getElementById("invoiceId").innerHTML = jsonData.invoiceId;
 
             var request = new XMLHttpRequest();
-
             request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
             request.addEventListener('load', function(event) {
                 if (request.status >= 200 && request.status < 300) {
@@ -134,6 +134,7 @@ function stateChange(txPrefix, data){
         document.getElementById(txPrefix+'confidence').innerHTML = "Confidence:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = "n/a";
     }
+
 }
 
 socket.on('StateChange', function(data){
