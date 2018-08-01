@@ -120,7 +120,7 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
                 .put("depthInBlocks", state.getDepthInBlocks())
                 .put("seenByPeers", state.getSeenByPeers())
                 .put("txid", tx.getHashAsString())
-                .put("depth", state.getDepthInBlocks()) // FIXME: legacy, fix in MarketplaceCore and MixerControl
+                .put("depth", state.getDepthInBlocks()) // FIXME: remove deprecated value as soon as PR https://github.com/IUNO-TDM/MarketplaceCore/pull/208 is merged
                 .toString();
     }
 
