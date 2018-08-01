@@ -1,25 +1,18 @@
 package iuno.tdm.paymentservice;
 
 import com.codeminders.socketio.common.SocketIOException;
-import com.codeminders.socketio.server.ConnectionException;
-import com.codeminders.socketio.server.ConnectionListener;
-import com.codeminders.socketio.server.EventListener;
-import com.codeminders.socketio.server.Socket;
 import com.codeminders.socketio.server.transport.jetty.JettySocketIOServlet;
-
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-
 import io.swagger.model.Invoice;
 import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import io.swagger.model.TransactionsInner;
-import org.json.JSONArray;
+import org.bitcoinj.core.Transaction;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.UUID;
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletException;
 
 /**
  * Created by goergch on 06.03.17.
@@ -59,13 +52,13 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         });
     }
 
-    public void onPayingStateChanged(BitcoinInvoice invoice, State state) {
-        invoiceStateChanged(invoice.getInvoice(), state);
+    public void onPayingStateChanged(BitcoinInvoice invoice, State state, Transaction tx) {
+        invoiceStateChanged(invoice.getInvoice(), state, tx);
     }
 
     @Override
-    public void onTransferStateChanged(BitcoinInvoice invoice, State state) {
-        invoiceTransferStateChanged(invoice.getInvoice(), state);
+    public void onTransferStateChanged(BitcoinInvoice invoice, State state, Transaction tx) {
+        invoiceTransferStateChanged(invoice.getInvoice(), state, tx);
     }
 
     @Override
@@ -79,9 +72,9 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     }
 
 
-    public void invoiceStateChanged(Invoice invoice, State state) {
+    public void invoiceStateChanged(Invoice invoice, State state, Transaction tx) {
         try {
-            String jsonString = buildStateJsonString(invoice, state);
+            String jsonString = buildStateJsonString(invoice, state, tx);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("StateChange", jsonString);
         } catch (SocketIOException e) {
@@ -89,9 +82,9 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         }
     }
 
-    public void invoiceTransferStateChanged(Invoice invoice, State state) {
+    public void invoiceTransferStateChanged(Invoice invoice, State state, Transaction tx) {
         try {
-            String jsonString = buildStateJsonString(invoice, state);
+            String jsonString = buildStateJsonString(invoice, state, tx);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
         } catch (SocketIOException e) {
@@ -119,13 +112,14 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         }
     }
 
-    private static String buildStateJsonString(Invoice invoice, State state) {
+    private static String buildStateJsonString(Invoice invoice, State state, Transaction tx) {
         return new JSONObject()
                 .put("invoiceId", invoice.getInvoiceId())
                 .put("referenceId", invoice.getReferenceId())
                 .put("state", state.getState())
                 .put("depthInBlocks", state.getDepthInBlocks())
                 .put("seenByPeers", state.getSeenByPeers())
+                .put("txid", tx.getHashAsString())
                 .put("depth", state.getDepthInBlocks()) // FIXME: legacy, fix in MarketplaceCore and MixerControl
                 .toString();
     }

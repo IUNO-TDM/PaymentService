@@ -93,12 +93,12 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPayingStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onPayingStateChanged(BitcoinInvoice.this, state, tx);
                 logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
                         invoiceId,
-                        txHash,
+                        tx.getHash(),
                         state.getState(),
                         state.getDepthInBlocks()));
             }
@@ -118,12 +118,12 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx);
                 logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
                         invoiceId,
-                        txHash,
+                        tx.getHash(),
                         state.getState(),
                         state.getDepthInBlocks()));
             }

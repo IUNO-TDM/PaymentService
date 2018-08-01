@@ -246,20 +246,19 @@ public class TransactionList implements TransactionConfidence.Listener {
                 confidence.getDepthInBlocks(),
                 reason.toString()));
 
-        TransactionConfidence mostConfidentConfidence = getBestConfidence();
-        State mostConfidentState = mapConfidenceToState(mostConfidentConfidence);
-        Sha256Hash mostConfidentTxHash = mostConfidentConfidence.getTransactionHash();
 
-        // The next commented line does not work as intended.
-//        if (confidence.getTransactionHash() == getMostConfidentTransaction().getHash())
-            informStateListenersMostConfidentState(mostConfidentTxHash, mostConfidentState);
+        Transaction bestTx = getMostConfidentTransaction();
+        TransactionConfidence bestConfidence = bestTx.getConfidence();
+        State bestState = mapConfidenceToState(bestConfidence);
+
+        informStateListenersMostConfidentState(bestTx, bestState);
 
         informStateListenersTransactionsChanged(getTransactions());
     }
 
-    private void informStateListenersMostConfidentState(Sha256Hash txHash, State newState) {
+    private void informStateListenersMostConfidentState(Transaction tx, State newState) {
         for (TransactionListStateListener listener : listeners) {
-            listener.mostConfidentTxStateChanged(txHash, newState);
+            listener.mostConfidentTxStateChanged(tx, newState);
         }
     }
 
