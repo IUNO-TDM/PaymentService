@@ -52,46 +52,40 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         });
     }
 
-    public void onPayingStateChanged(BitcoinInvoice invoice, State state, Transaction tx) {
-        invoiceStateChanged(invoice.getInvoice(), state, tx);
+    @Override
+    public void onPaymentStateChanged(BitcoinInvoice invoice, State state, Transaction tx, Transactions txList) {
+        stateChanged("StateChange", invoice.getInvoice(), state, tx, txList); // deprecated
+        stateChanged("PaymentStateChange", invoice.getInvoice(), state, tx, txList);
     }
 
     @Override
-    public void onTransferStateChanged(BitcoinInvoice invoice, State state, Transaction tx) {
-        invoiceTransferStateChanged(invoice.getInvoice(), state, tx);
+    public void onTransferStateChanged(BitcoinInvoice invoice, State state, Transaction tx, Transactions txList) {
+        stateChanged("TransferStateChange", invoice.getInvoice(), state, tx, txList);
     }
 
+    @Deprecated
     @Override
     public void onPayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
         invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
     }
 
+    @Deprecated
     @Override
     public void onTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
         invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
     }
 
-
-    public void invoiceStateChanged(Invoice invoice, State state, Transaction tx) {
+    public void stateChanged(String eventName, Invoice invoice, State state, Transaction tx, Transactions txList) {
         try {
-            String jsonString = buildStateJsonString(invoice, state, tx);
+            String jsonString = buildStateJsonString(invoice, state, tx, txList);
             String roomId = invoice.getInvoiceId().toString();
-            of("/invoices").in(roomId).emit("StateChange", jsonString);
+            of("/invoices").in(roomId).emit(eventName, jsonString);
         } catch (SocketIOException e) {
             logger.error("SocketIOException in onPayingStateChanged ", e);
         }
     }
 
-    public void invoiceTransferStateChanged(Invoice invoice, State state, Transaction tx) {
-        try {
-            String jsonString = buildStateJsonString(invoice, state, tx);
-            String roomId = invoice.getInvoiceId().toString();
-            of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
-        } catch (SocketIOException e) {
-            logger.error("SocketIOException in onPayingStateChanged ", e);
-        }
-    }
-
+    @Deprecated
     public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
             String jsonString = buildTransactionsJsonString(invoice, transactions);
@@ -102,6 +96,7 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         }
     }
 
+    @Deprecated
     public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
             String jsonString = buildTransactionsJsonString(invoice, transactions);
@@ -112,18 +107,29 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         }
     }
 
-    private static String buildStateJsonString(Invoice invoice, State state, Transaction tx) {
-        return new JSONObject()
+    private static String buildStateJsonString(Invoice invoice, State state, Transaction tx, Transactions txList) {
+        JSONObject jsonObject = new JSONObject()
                 .put("invoiceId", invoice.getInvoiceId())
                 .put("referenceId", invoice.getReferenceId())
                 .put("state", state.getState())
                 .put("depthInBlocks", state.getDepthInBlocks())
                 .put("seenByPeers", state.getSeenByPeers())
                 .put("txid", tx.getHashAsString())
-                .put("depth", state.getDepthInBlocks()) // FIXME: remove deprecated value as soon as PR https://github.com/IUNO-TDM/MarketplaceCore/pull/208 is merged
-                .toString();
+                .put("depth", state.getDepthInBlocks()); // FIXME: remove this deprecated key/value as soon as PR https://github.com/IUNO-TDM/MarketplaceCore/pull/208 is merged
+
+        for (TransactionsInner ti : txList)
+            jsonObject.append("transactions", new JSONObject()
+                    .put("transaction", ti.getTransactionId())
+                    .put("state", new JSONObject()
+                            .put("state", ti.getState().getState())
+                            .put("depthInBlocks", ti.getState().getDepthInBlocks())
+                            .put("seenByPeers", ti.getState().getSeenByPeers()))
+            );
+
+         return jsonObject.toString();
     }
 
+    @Deprecated
     private static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
         JSONObject bar = new JSONObject()
                 .put("invoiceId", invoice.getInvoiceId())

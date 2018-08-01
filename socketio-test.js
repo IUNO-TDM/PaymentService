@@ -142,11 +142,19 @@ socket.on('StateChange', function(data){
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     $('#StateChange').html(library.json.prettyPrint(jd));
+});
+
+socket.on('PaymentStateChange', function(data){
+    console.log('PaymentStateChange: ' + data);
+    const jd = JSON.parse(data);
+    document.getElementById('log').innerHTML = 'PaymentStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
+    $('#PaymentStateChange').html(library.json.prettyPrint(jd));
 
     stateChange('p-', jd);
 
     document.getElementById('progressbar').style.width = jd.depthInBlocks/6*100 + '%';
 });
+
 
 socket.on('TransferStateChange', function(data){
     console.log('TransferStateChange: ' + data);

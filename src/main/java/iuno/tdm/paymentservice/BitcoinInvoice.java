@@ -90,12 +90,11 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     private List<TransferPair> transfers = new Vector<>();
 
-    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Transaction tx, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPayingStateChanged(BitcoinInvoice.this, state, tx);
+                bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
                 logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
                         invoiceId,
                         tx.getHash(),
@@ -103,7 +102,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                         state.getDepthInBlocks()));
             }
         }
-
+        @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
@@ -115,12 +114,11 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     };
 
-    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Transaction tx, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx);
+                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
                 logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
                         invoiceId,
                         tx.getHash(),
@@ -128,7 +126,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                         state.getDepthInBlocks()));
             }
         }
-
+        @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {

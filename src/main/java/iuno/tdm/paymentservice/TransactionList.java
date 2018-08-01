@@ -251,17 +251,18 @@ public class TransactionList implements TransactionConfidence.Listener {
         TransactionConfidence bestConfidence = bestTx.getConfidence();
         State bestState = mapConfidenceToState(bestConfidence);
 
-        informStateListenersMostConfidentState(bestTx, bestState);
+        informStateListenersMostConfidentState(bestTx, bestState, getTransactions());
 
         informStateListenersTransactionsChanged(getTransactions());
     }
 
-    private void informStateListenersMostConfidentState(Transaction tx, State newState) {
+    private void informStateListenersMostConfidentState(Transaction tx, State newState, Transactions txList) {
         for (TransactionListStateListener listener : listeners) {
-            listener.mostConfidentTxStateChanged(tx, newState);
+            listener.mostConfidentTxStateChanged(tx, newState, txList);
         }
     }
 
+    @Deprecated
     private void informStateListenersTransactionsChanged(Transactions transactions) {
         for (TransactionListStateListener listener : listeners) {
             listener.transactionsOrStatesChanged(transactions);

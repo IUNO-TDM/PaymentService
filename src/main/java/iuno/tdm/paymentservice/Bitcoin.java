@@ -259,9 +259,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         {
             SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), savingsAddress));
             wallet.completeTx(sr);
-            wallet.commitTx(sr.tx);
-            peerGroup.broadcastTransaction(sr.tx)
-                    .broadcast();
+            //wallet.commitTx(sr.tx);
+            //peerGroup.broadcastTransaction(sr.tx).broadcast();
+
         } catch (Exception e) {
             // do nothing
         }
