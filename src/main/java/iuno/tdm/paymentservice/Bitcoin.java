@@ -49,10 +49,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener, BitcoinInvoiceCallbackInterface {
+public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener {
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
@@ -287,7 +286,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, couponRandomSeed);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(),
+                wallet.freshReceiveAddress(), paymentSocketIOServlet, couponRandomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         peerGroup.addWallet(couponWallet);
 
@@ -419,25 +419,5 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
-    }
-
-    @Override
-    public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
-        paymentSocketIOServlet.invoiceStateChanged(invoice.getInvoice(), state);
-    }
-
-    @Override
-    public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
-        paymentSocketIOServlet.invoiceTransferStateChanged(invoice.getInvoice(), state);
-    }
-
-    @Override
-    public void invoicePayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
-    }
-
-    @Override
-    public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
     }
 }

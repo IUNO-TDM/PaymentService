@@ -45,8 +45,8 @@ public class TransactionList implements TransactionConfidence.Listener {
         if (null != prevValue) prevValue.getConfidence().removeEventListener(this);
         transaction.getConfidence().addEventListener(this);
 
-        logger.debug("Added tx %s to TransactionList. Registered transactions", transaction.getHashAsString());
-        logger.debug("This list has now %d transactions", transactions.size());
+        logger.debug("Added tx " + transaction.getHashAsString() + " to TransactionList. Registered transactions");
+        logger.debug("This list has now " + transactions.size() + " transactions");
         informStateListenersTransactionsChanged(getTransactions());
     }
 

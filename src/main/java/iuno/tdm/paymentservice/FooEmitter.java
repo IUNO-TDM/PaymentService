@@ -9,6 +9,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
+@Deprecated
 public interface FooEmitter {
     void invoiceStateChanged(Invoice invoice, State state);
 

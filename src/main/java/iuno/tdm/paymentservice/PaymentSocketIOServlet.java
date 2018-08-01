@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * Created by goergch on 06.03.17.
  */
-public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooEmitter {
+public class PaymentSocketIOServlet extends JettySocketIOServlet implements BitcoinInvoiceStateChangedEventListener {
     public static final String PAYMENTSERVLET = "PaymentSocketIoCallback";
 
     private Logger logger;
@@ -59,30 +59,46 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
         });
     }
 
+    public void onPayingStateChanged(BitcoinInvoice invoice, State state) {
+        invoiceStateChanged(invoice.getInvoice(), state);
+    }
 
     @Override
+    public void onTransferStateChanged(BitcoinInvoice invoice, State state) {
+        invoiceTransferStateChanged(invoice.getInvoice(), state);
+    }
+
+    @Override
+    public void onPayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
+        invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
+    }
+
+    @Override
+    public void onTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
+        invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
+    }
+
+
     public void invoiceStateChanged(Invoice invoice, State state) {
         try {
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("StateChange", jsonString);
         } catch (SocketIOException e) {
-            logger.error("SocketIOException in invoiceStateChanged ", e);
+            logger.error("SocketIOException in onPayingStateChanged ", e);
         }
     }
 
-    @Override
     public void invoiceTransferStateChanged(Invoice invoice, State state) {
         try {
             String jsonString = buildStateJsonString(invoice, state);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit("TransferStateChange", jsonString);
         } catch (SocketIOException e) {
-            logger.error("SocketIOException in invoiceStateChanged ", e);
+            logger.error("SocketIOException in onPayingStateChanged ", e);
         }
     }
 
-    @Override
     public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
             String jsonString = buildTransactionsJsonString(invoice, transactions);
@@ -93,7 +109,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements FooE
         }
     }
 
-    @Override
     public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
         try {
             String jsonString = buildTransactionsJsonString(invoice, transactions);

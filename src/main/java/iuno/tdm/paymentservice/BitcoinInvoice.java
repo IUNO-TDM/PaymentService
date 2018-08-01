@@ -70,7 +70,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     private KeyChainGroup group;
     private Wallet couponWallet;
 
-    private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
+    private BitcoinInvoiceStateChangedEventListener bitcoinInvoiceCallbackInterface = null;
 
     private TransactionList incomingTxList = new TransactionList();
 
@@ -95,7 +95,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onPayingStateChanged(BitcoinInvoice.this, state);
                 logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
                         invoiceId,
                         txHash,
@@ -107,7 +107,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoicePayingTransactionsChanged(BitcoinInvoice.this, transactions);
+                bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
                         transactions.size()));
@@ -120,7 +120,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceTransferStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state);
                 logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
                         invoiceId,
                         txHash,
@@ -132,7 +132,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceTransferTransactionsChanged(BitcoinInvoice.this, transactions);
+                bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
                         transactions.size()));
@@ -346,7 +346,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceStateChangedEventListener callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
         incomingTxList.addStateListener(incomingTxStateListener);
         transferTxList.addStateListener(transferTxStateListener);
