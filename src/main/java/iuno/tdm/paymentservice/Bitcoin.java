@@ -52,7 +52,12 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener {
-    final static int CLEANUPINTERVAL = 20; // clean up every n minutes
+    public static final String PREFIX = "PaymentService";
+
+    private final static int CLEANUPINTERVAL = 20; // clean up every n minutes
+
+    private final Coin minimumCash = Coin.valueOf(Long.parseLong(System.getProperty("minimumCash", "500000")));
+    private final String savingsAddress = System.getProperty("savingsAddress", "mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8");
 
     private Wallet wallet = null;
     private PeerGroup peerGroup = null;
@@ -61,8 +66,6 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     private DeterministicSeed couponRandomSeed;
 
     private HashMap<UUID, BitcoinInvoice> invoiceHashMap = new HashMap<>();
-
-    public static final String PREFIX = "PaymentService";
 
     private static boolean automaticallyRecoverBrokenWallet;
 
@@ -253,19 +256,43 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return w;
     }
 
-    public void stop() {
-        String savingsAddress = System.getProperty("savingsAddress", "");
-        try
-        {
-            SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), savingsAddress));
-            wallet.completeTx(sr);
-            //wallet.commitTx(sr.tx);
-            //peerGroup.broadcastTransaction(sr.tx).broadcast();
+    private void safeMoney() {
+        try {
+            Address deposit = Address.fromBase58(context.getParams(), savingsAddress);
 
-        } catch (Exception e) {
-            // do nothing
+            int count = 1;
+            while (balanceGreaterTwiceMinimumCashAmount()) {
+                Coin amount = wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).div(count)
+                        .subtract(minimumCash);
+
+                if (amount.isNegative()) break;
+
+                SendRequest sr = SendRequest.to(deposit, amount);
+                sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+
+                try
+                {
+                    wallet.completeTx(sr);
+                    wallet.commitTx(sr.tx);
+                    peerGroup.broadcastTransaction(sr.tx).broadcast();
+                    count = 1;
+                } catch (Wallet.ExceededMaxTransactionSize e) {
+                    count += 1;
+                    continue;
+                } catch (InsufficientMoneyException m) {
+                    break;
+                }
+            }
+        } catch (AddressFormatException ignored){
         }
+    }
 
+    private boolean balanceGreaterTwiceMinimumCashAmount() {
+        return wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).isGreaterThan(minimumCash.multiply(2));
+    }
+
+    public void stop() {
+        safeMoney();
         peerGroup.stop();
         wallet.removeChangeEventListener(this);
         wallet.removeCoinsReceivedEventListener(this);
@@ -442,5 +469,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
+
+        safeMoney();
     }
 }

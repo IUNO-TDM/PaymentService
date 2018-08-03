@@ -72,6 +72,10 @@
                             <name>savingsAddress</name>
                             <value>${savingsAddress}</value>
                         </systemProperty>
+                        <systemProperty>
+                            <name>minimumCash</name>
+                            <value>${minimumCash}</value>
+                        </systemProperty>
                     </systemProperties>
                 </configuration>
                 <executions>
@@ -245,5 +249,6 @@
         <walletPassphrase/>
         <walletCreationTime>1504199300</walletCreationTime>
         <savingsAddress>mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8</savingsAddress>
+        <minimumCash>500000</minimumCash>
     </properties>
 </project>
