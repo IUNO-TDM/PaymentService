@@ -312,7 +312,30 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     }
 
     public String getInvoiceBip21(UUID id) throws NullPointerException {
-        return invoiceHashMap.get(id).getBip21URI();
+        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
+//        simpleDoubleSpend(bcInvoice.getReceiveAddress(), Coin.valueOf(bcInvoice.getInvoice().getTotalAmount()));
+        return bcInvoice.getBip21URI();
+    }
+
+    private void simpleDoubleSpend(Address theirs, Coin amount) {
+        Address mine = Address.fromBase58(context.getParams(), "n46V8bGmUpYpDQQhUZpwYmtwh1iMzxQ4XS");
+        SendRequest first = SendRequest.to(theirs, amount);
+        first.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        SendRequest second = SendRequest.to(mine, amount);
+        try
+        {
+            wallet.completeTx(first);
+            wallet.completeTx(second);
+            int i=0;
+            for (Peer p : peerGroup.getConnectedPeers()) {
+                if (0 == i%2) p.sendMessage(first.tx);
+                else p.sendMessage(second.tx);
+                i++;
+            }
+            wallet.commitTx(first.tx);
+            wallet.commitTx(second.tx);
+        } catch (InsufficientMoneyException ignored) {
+        }
     }
 
     public List<AddressValuePair> getInvoiceTransfers(UUID id) throws NullPointerException {
@@ -359,7 +382,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
      * Removes all expired invoices.
      */
     private void cleanUpInvoices() {
-        List<UUID> ids = new ArrayList();
+        List<UUID> ids = new ArrayList<>();
         for (UUID id : invoiceHashMap.keySet()) { // get expired invoices...
             if (invoiceHashMap.get(id).isExpired()) {
                 ids.add(id);
