@@ -2,7 +2,7 @@ swagger: '2.0'
 info:
   title: IUNO TDM Payment Service API
   description: 'Create invoices, check payment and forward coins.'
-  version: 1.0.0
+  version: 1.1.0
 host: 'localhost:8080'
 schemes:
   - http
@@ -125,7 +125,7 @@ paths:
             $ref: '#/definitions/Error'
   '/invoices/{invoiceId}/state':
     get:
-      summary: Returns a confidence object that describes the state of the incoming tx.
+      summary: Returns a confidence object that describes the state of the most confident incoming tx.
       operationId: getInvoiceState
       parameters:
         - name: invoiceId
@@ -145,7 +145,7 @@ paths:
             $ref: '#/definitions/Error'
   '/invoices/{invoiceId}/transferState':
     get:
-      summary: Returns a confidence object that describes the state of the transfer tx.
+      summary: Returns a confidence object that describes the state of the most confident transfer tx.
       operationId: getInvoiceTransferState
       parameters:
         - name: invoiceId
@@ -388,6 +388,10 @@ definitions:
         type: integer
         format: int32
         description: depth of a building transaction in blocks
+      seenByPeers:
+        type: integer
+        format: int32
+        description: count of peers that have seen this transaction
   Coupon:
     type: object
     properties:

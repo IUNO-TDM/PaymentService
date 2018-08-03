@@ -1,12 +1,12 @@
 console.log('Starting Websocket Client');
 
 var invoice = {
-    totalAmount: 100000000,
+    totalAmount: 10000000,
     referenceId: 'Brot',
     expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
     transfers: [{
         address: pubkeys[Math.floor(Math.random()*pubkeys.length)] || 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-        coin: 99900000
+        coin: 4990000
     }]
 };
 
@@ -71,6 +71,7 @@ var socket = io('http://localhost:8080/invoices', {
 socket.on('connect', function(){
     console.log('Connected');
     document.getElementById('log').innerHTML = 'connected';
+    resetPage();
 
     var http = new XMLHttpRequest();
     var url = "http://localhost:8080/v1/invoices";
@@ -113,10 +114,10 @@ function stateChange(txPrefix, data){
     var barElement = document.getElementById(txPrefix+'bar');
 
     var depthInBlocks = data.depthInBlocks;
+    var seenByPeers = data.seenByPeers;
 
     if ('pending' == data.state) {
         if ("p-" == txPrefix) showWaitMark();
-        var seenByPeers = (2147483648 + depthInBlocks); // TODO use "seen by peers"
         barElement.style.width = seenByPeers + '%';
         document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
@@ -124,7 +125,7 @@ function stateChange(txPrefix, data){
     } else if ('building' == data.state) {
         if ("p-" == txPrefix) showCheckMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Depth in blocks:";
-        document.getElementById(txPrefix+'confidenceV').innerHTML = data.depthInBlocks;
+        document.getElementById(txPrefix+'confidenceV').innerHTML = depthInBlocks;
         barElement.classList.add('bg-success');
         barElement.classList.remove('bg-warning');
         barElement.style.width = depthInBlocks/6*100 + '%';
@@ -137,16 +138,48 @@ function stateChange(txPrefix, data){
 
 }
 
+function resetPage() {
+    showWaitMark();
+
+    $('#progressbar').width('0%');
+    $('#invoiceId').html('n/a');
+    $('#referenceId').html('n/a');
+    $('#bip21').html('n/a');
+    $('#p-txid').html('n/a');
+    $('#p-state').html('n/a');
+    $('#p-bar').width('0%');
+    $('#p-confidenceV').html('n/a');
+    $('#t-confidenceV').html('n/a');
+    $('#t-txid').html('n/a');
+    $('#t-state').html('n/a');
+    $('#t-bar').width('0%');
+    $('#invoice').html('');
+    $('#PaymentStateChange').html('');
+    $('#TransferStateChange').html('');
+    $('#StateChange').html('');
+    $('#PayingTransactionsChange').html('');
+    $('#TransferTransactionsChange').html('');
+    $('#log').html('...');
+}
+
 socket.on('StateChange', function(data){
     console.log('StateChange: ' + data);
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     $('#StateChange').html(library.json.prettyPrint(jd));
+});
+
+socket.on('PaymentStateChange', function(data){
+    console.log('PaymentStateChange: ' + data);
+    const jd = JSON.parse(data);
+    document.getElementById('log').innerHTML = 'PaymentStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
+    $('#PaymentStateChange').html(library.json.prettyPrint(jd));
 
     stateChange('p-', jd);
 
-    document.getElementById('progressbar').style.width = jd.depthInBlocks/6*100 + '%';
+    $('#progressbar').width(jd.depthInBlocks/6*100 + '%');
 });
+
 
 socket.on('TransferStateChange', function(data){
     console.log('TransferStateChange: ' + data);

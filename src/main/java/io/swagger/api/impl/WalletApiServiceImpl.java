@@ -11,7 +11,7 @@ import iuno.tdm.paymentservice.Bitcoin;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
 
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T07:22:12.252Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-07-25T13:00:10.686Z")
 public class WalletApiServiceImpl extends WalletApiService {
     @Override
     public Response getWalletBalance(SecurityContext securityContext) throws NotFoundException {

