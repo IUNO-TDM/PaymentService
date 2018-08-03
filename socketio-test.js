@@ -71,6 +71,7 @@ var socket = io('http://localhost:8080/invoices', {
 socket.on('connect', function(){
     console.log('Connected');
     document.getElementById('log').innerHTML = 'connected';
+    resetPage();
 
     var http = new XMLHttpRequest();
     var url = "http://localhost:8080/v1/invoices";
@@ -137,6 +138,30 @@ function stateChange(txPrefix, data){
 
 }
 
+function resetPage() {
+    showWaitMark();
+
+    $('#progressbar').width('0%');
+    $('#invoiceId').html('n/a');
+    $('#referenceId').html('n/a');
+    $('#bip21').html('n/a');
+    $('#p-txid').html('n/a');
+    $('#p-state').html('n/a');
+    $('#p-bar').width('0%');
+    $('#p-confidenceV').html('n/a');
+    $('#t-confidenceV').html('n/a');
+    $('#t-txid').html('n/a');
+    $('#t-state').html('n/a');
+    $('#t-bar').width('0%');
+    $('#invoice').html('');
+    $('#PaymentStateChange').html('');
+    $('#TransferStateChange').html('');
+    $('#StateChange').html('');
+    $('#PayingTransactionsChange').html('');
+    $('#TransferTransactionsChange').html('');
+    $('#log').html('...');
+}
+
 socket.on('StateChange', function(data){
     console.log('StateChange: ' + data);
     const jd = JSON.parse(data);
@@ -152,7 +177,7 @@ socket.on('PaymentStateChange', function(data){
 
     stateChange('p-', jd);
 
-    document.getElementById('progressbar').style.width = jd.depthInBlocks/6*100 + '%';
+    $('#progressbar').width(jd.depthInBlocks/6*100 + '%');
 });
 
 
