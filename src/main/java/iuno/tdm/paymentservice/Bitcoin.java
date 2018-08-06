@@ -57,7 +57,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     private final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private final Coin minimumCash = Coin.valueOf(Long.parseLong(System.getProperty("minimumCash", "500000")));
-    private final String savingsAddress = System.getProperty("savingsAddress", "mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8");
+    private final String savingsAddressString = System.getProperty("savingsAddress", "mh8GaPRczMr7jSJ75gQDfGqjLeD49MkQi8");
+    private Address savingsAddress;
 
     private Wallet wallet = null;
     private PeerGroup peerGroup = null;
@@ -86,6 +87,8 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         final NetworkParameters params = TestNet3Params.get();
         context = new Context(params);
         Context.propagate(context);
+
+        savingsAddress = Address.fromBase58(context.getParams(), savingsAddressString);
 
         // read system property to check if broken wallet shall be recovered from backup automatically
         automaticallyRecoverBrokenWallet = System.getProperty("automaticallyRecoverBrokenWallet", "false").equalsIgnoreCase("true");
@@ -256,43 +259,45 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         return w;
     }
 
-    private void safeMoney() {
-        try {
-            Address deposit = Address.fromBase58(context.getParams(), savingsAddress);
+    /**
+     * This method sends excessive money to a safe wallet.
+     */
+    public static List<Transaction> createSafeMoneyTransactions(Wallet w, Address addr, Coin minValue, Coin maxValue) {
+        assert(minValue.isLessThan(maxValue));
 
-            int count = 1;
-            while (balanceGreaterTwiceMinimumCashAmount()) {
-                Coin amount = wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).div(count)
-                        .subtract(minimumCash);
+        List<Transaction> txs = new ArrayList<>();
 
-                if (amount.isNegative()) break;
+        int count=1;
+        Coin saved = Coin.ZERO;
+        while (w.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).isGreaterThan(maxValue)) {
+            Coin amount = w.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE)
+                    .subtract(minValue)
+                    .div(count);
 
-                SendRequest sr = SendRequest.to(deposit, amount);
-                sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            SendRequest sr = SendRequest.to(addr, amount);
+            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
-                try
-                {
-                    wallet.completeTx(sr);
-                    wallet.commitTx(sr.tx);
-                    peerGroup.broadcastTransaction(sr.tx).broadcast();
-                    count = 1;
-                } catch (Wallet.ExceededMaxTransactionSize e) {
-                    count += 1;
-                    continue;
-                } catch (InsufficientMoneyException m) {
-                    break;
-                }
+            try
+            {
+                w.completeTx(sr);
+                w.commitTx(sr.tx);
+                txs.add(sr.tx);
+                saved.add(amount);
+                count = 1;
+            } catch (Wallet.ExceededMaxTransactionSize e) {
+                count += 1;
+                continue;
+            } catch (InsufficientMoneyException m) {
+                break;
             }
-        } catch (AddressFormatException ignored){
         }
-    }
-
-    private boolean balanceGreaterTwiceMinimumCashAmount() {
-        return wallet.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).isGreaterThan(minimumCash.multiply(2));
+        if (0 < txs.size())
+            logger.info(String.format("Sent %d Satoshis to savings address using %d transactions.", saved.getValue(), txs.size()));
+        return txs;
     }
 
     public void stop() {
-        safeMoney();
+        safeMoney(wallet);
         peerGroup.stop();
         wallet.removeChangeEventListener(this);
         wallet.removeCoinsReceivedEventListener(this);
@@ -426,50 +431,77 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         peerGroup.broadcastTransaction(tx).broadcast();
     }
 
-    @Override
-    public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
-        logger.info("Received tx with " + tx.getValueSentToMe(wallet).toFriendlyString() + ": " + tx);
-
-        // create a hashmap with addresses and the sum of all coins send to each one
-        HashMap<Address, Coin> addressCoinHashMap = new HashMap<>();
-        for (TransactionOutput txout : tx.getOutputs()) {
+    /**
+     * This method takes a list of transaction outputs and returns a hashmap that maps addresses to the sum ot the
+     * received coin values.
+     * @param txos list of transaction outputs
+     * @return hashmap that maps coin values to addresses
+     */
+    private HashMap<Address, Coin> mapCoinsToAddresses(List<TransactionOutput> txos) {
+        HashMap<Address, Coin> acm = new HashMap<>();
+        for (TransactionOutput txout : txos) {
             Address addr = txout.getAddressFromP2PKHScript(context.getParams());
-            if(addr == null) addr = txout.getAddressFromP2SH(context.getParams());
-            Coin value = txout.getValue();
-            if (null != addr) {
-                if (! addressCoinHashMap.containsKey(addr)) {
-                    addressCoinHashMap.put(addr, value);
+            if (null == addr)
+                addr = txout.getAddressFromP2SH(context.getParams());
 
-                } else {
-                    addressCoinHashMap.put(addr, addressCoinHashMap.get(addr).add(value));
-                }
+            if (null == addr)
+                continue; // unknown address format, discard transaction output
+
+            Coin value = txout.getValue();
+            if (!acm.containsKey(addr))
+                acm.put(addr, value);
+            else
+                acm.put(addr, acm.get(addr).add(value));
+        }
+        return acm;
+    }
+
+    @Override
+    public void onCoinsReceived(Wallet w, Transaction tx, Coin prevBalance, Coin newBalance) {
+        logger.info("Received tx with " + tx.getValueSentToMe(w).toFriendlyString() + ": " + tx);
+
+        HashMap<Address, Coin> addressCoinHashMap = mapCoinsToAddresses(tx.getOutputs());
+
+        boolean payTransfers;
+        for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
+            payTransfers = bcInvoice.sortOutputsToAddresses(tx, addressCoinHashMap);
+            if (payTransfers) {
+                SendRequest sr = bcInvoice.tryFinishInvoice(w);
+                if (null != sr)
+                    syncBroadcastTransaction(sr.tx);
             }
         }
 
-        for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
-            bcInvoice.sortOutputsToAddresses(tx, addressCoinHashMap);
-            SendRequest sr = bcInvoice.tryFinishInvoice(wallet);
-            if (null != sr)
-                syncBroadcastTransaction(sr.tx);
-        }
-
-        logger.info("Balance: " + wallet.getBalance().toFriendlyString());
+        logger.info("Balance: " + w.getBalance().toFriendlyString());
     }
 
-
+    private int blockHeight = 0;
     @Override
-    public void onWalletChanged(Wallet wallet) {
-        for (UUID uuid: invoiceHashMap.keySet()) {
-            SendRequest sr = invoiceHashMap.get(uuid).tryFinishInvoice(wallet);
-            if (null != sr)
-                syncBroadcastTransaction(sr.tx);
-        }
+    public void onWalletChanged(Wallet w) {
+        int newBlockHeight = w.getLastBlockSeenHeight();
+        if (blockHeight < newBlockHeight)
+            tryFinishAllInvoices();
+        blockHeight = newBlockHeight; // assign, in case blocks have been reordered
 
         // cleanup expired transactions
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
 
-        safeMoney();
+        safeMoney(w);
+    }
+
+    private void safeMoney(Wallet w) {
+        List<Transaction> txs = createSafeMoneyTransactions(w, savingsAddress, minimumCash, minimumCash.multiply(2));
+        for (Transaction tx : txs)
+            syncBroadcastTransaction(tx);
+    }
+
+    private void tryFinishAllInvoices() {
+        for (BitcoinInvoice bcInvoice : invoiceHashMap.values()) {
+            SendRequest sr = bcInvoice.tryFinishInvoice(wallet);
+            if (null != sr)
+                syncBroadcastTransaction(sr.tx);
+        }
     }
 }

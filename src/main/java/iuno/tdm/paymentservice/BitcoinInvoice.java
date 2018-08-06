@@ -102,6 +102,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                         state.getDepthInBlocks()));
             }
         }
+
         @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
@@ -126,6 +127,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                         state.getDepthInBlocks()));
             }
         }
+
         @Deprecated
         @Override
         public void transactionsOrStatesChanged(Transactions transactions) {
@@ -166,6 +168,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
     /**
      * This method is yet needed to add the couponWallet to the peerGroup owned by the parent class
+     *
      * @return couponWallet
      */
     Wallet getCouponWallet() { // TODO remove this method
@@ -236,10 +239,10 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         StringBuilder response = new StringBuilder();
         url = new URL(blockexplorerAddr + "/addr/" + b58 + "/utxo");
         HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
-        if(!blockexplorerPasswd.isEmpty() && !blockexplorerUser.isEmpty()){
+        if (!blockexplorerPasswd.isEmpty() && !blockexplorerUser.isEmpty()) {
             String userpass = blockexplorerUser + ":" + blockexplorerPasswd;
             String basicAuth = "Basic " + Base64.getEncoder().encodeToString(userpass.getBytes());
-            con.setRequestProperty ("Authorization", basicAuth);
+            con.setRequestProperty("Authorization", basicAuth);
         }
 
         con.setRequestProperty("Content-Type", "application/json");
@@ -324,14 +327,14 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     }
 
-    static void importParams(HashMap<String, String> params){
-        if (params.containsKey(PARAM_KEY_BE_ADDR)){
+    static void importParams(HashMap<String, String> params) {
+        if (params.containsKey(PARAM_KEY_BE_ADDR)) {
             blockexplorerAddr = params.get(PARAM_KEY_BE_ADDR);
         }
-        if (params.containsKey(PARAM_KEY_BE_PASSWD)){
+        if (params.containsKey(PARAM_KEY_BE_PASSWD)) {
             blockexplorerPasswd = params.get(PARAM_KEY_BE_PASSWD);
         }
-        if (params.containsKey(PARAM_KEY_BE_USER)){
+        if (params.containsKey(PARAM_KEY_BE_USER)) {
             blockexplorerUser = params.get(PARAM_KEY_BE_USER);
         }
     }
@@ -502,15 +505,15 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      */
     SendRequest tryFinishInvoice(Wallet wallet) {
         if (transfers.isEmpty()) {
-            logger.warn(String.format("Invoice %s has no transfers.", invoiceId.toString()));
+            logger.debug(String.format("Invoice %s has no transfers.", invoiceId.toString()));
             return null;
         }
         if (!incomingTxList.isOneOrMoreTxPending()) {
-            logger.warn(String.format("Invoice %s has not yet been paid.", invoiceId.toString()));
+            logger.debug(String.format("Invoice %s has not yet been paid.", invoiceId.toString()));
             return null;
         }
         if (transferTxList.isOneOrMoreTxPending()) {
-            logger.warn(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
+            logger.debug(String.format("Invoices %s transfers are already payed.", invoiceId.toString()));
             return null;
         }
 
@@ -547,18 +550,18 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         }
     }
 
-    private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> foo) {
+    private boolean doesTxFulfillTransferPayment(HashMap<Address, Coin> acm) {
         // own wallet must be paid
-        return (foo.keySet().contains(transferAddress)) // own wallet must be paid
-                && (totalAmount - transferAmount) <= foo.get(transferAddress).getValue()
-                && doesTxFulfillTransfers(foo);
+        return (acm.keySet().contains(transferAddress)) // own wallet must be paid
+                && (totalAmount - transferAmount) <= acm.get(transferAddress).getValue()
+                && doesTxFulfillTransfers(acm);
     }
 
-    private boolean doesTxFulfillTransfers(HashMap<Address, Coin> foo) {
+    private boolean doesTxFulfillTransfers(HashMap<Address, Coin> acm) {
         boolean result = true;
         for (TransferPair pa : transfers) { // all transfers must be paid as well
-            if (!(foo.keySet().contains(pa.address))
-                    || (pa.targetValue.isGreaterThan(foo.get(pa.address)))) {
+            if (!(acm.keySet().contains(pa.address))
+                    || (pa.targetValue.isGreaterThan(acm.get(pa.address)))) {
                 result = false;
                 break;
             }
@@ -571,9 +574,9 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      *
      * @param tx new transaction with outputs to be checked
      */
-    void sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
+    boolean sortOutputsToAddresses(Transaction tx, HashMap<Address, Coin> addressCoinHashMap) {
         logger.debug("transaction script: " + HEX.encode(tx.bitcoinSerialize()));
-
+        boolean ret = false;
         if (addressCoinHashMap.keySet().contains(receiveAddress)) {
             long value = addressCoinHashMap.get(receiveAddress).getValue();
             if (totalAmount <= value) { // transaction fulfills direct payment
@@ -582,6 +585,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                         + " with " + addressCoinHashMap.get(receiveAddress).toFriendlyString());
                 incomingTxList.add(tx);
             }
+            ret = true;
 
         } else if (doesTxFulfillTransferPayment(addressCoinHashMap)) {
             logger.info("Received transfer payment for invoice " + invoiceId.toString()
@@ -590,7 +594,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
             if (!transfers.isEmpty()) transferTxList.add(tx);
 
         } else if (!transfers.isEmpty() && doesTxFulfillTransfers(addressCoinHashMap)) {
-            // this is to recognize a transfer payment that became changed by malleability
+            // this is to recognize a transfer payment that became changed by malleability or a double spend
             logger.info(String.format("%s received transfers only", invoiceId.toString()));
             transferTxList.add(tx);
 
@@ -599,5 +603,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                     invoiceId, tx.getHash().toString()));
         }
 
+        return ret;
     }
 }
