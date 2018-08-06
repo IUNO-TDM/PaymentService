@@ -14,8 +14,6 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import static io.swagger.model.State.StateEnum.UNKNOWN;
-
 /**
  * Created by goergch on 26.04.17.
  * Handles a set of Transactions. The List can track the Confidence / State.
