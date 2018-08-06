@@ -583,8 +583,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
             transferTxList.add(tx);
 
         } else {
-            logger.warn(String.format("%s transaction %s contained no output for this invoice which should not happen",
-                    invoiceId, tx.getHash().toString()));
+            //silently do nothing since this will happen with transfer payments
         }
 
         return ret;
