@@ -27,6 +27,7 @@ import org.bitcoinj.core.*;
 import org.bitcoinj.core.listeners.TransactionConfidenceEventListener;
 import org.bitcoinj.uri.BitcoinURI;
 import org.bitcoinj.wallet.*;
+import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -41,7 +42,6 @@ import java.util.*;
 
 import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.core.Utils.HEX;
-import org.bitcoinj.wallet.listeners.WalletChangeEventListener;
 
 /**
  * Invoices may be paid by either completing a BIP21 URI in one single transaction
@@ -95,11 +95,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
-                logger.info(String.format("%s incoming tx %s changed state to (%s, %d)",
-                        invoiceId,
-                        tx.getHash(),
-                        state.getState(),
-                        state.getDepthInBlocks()));
             }
         }
 
@@ -108,9 +103,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
-                logger.info(String.format("%s transaction count or state changed: Count %d",
-                        invoiceId,
-                        transactions.size()));
             }
         }
     };
@@ -120,11 +112,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
-                logger.info(String.format("%s transfer tx %s changed state to (%s, %d)",
-                        invoiceId,
-                        tx.getHash(),
-                        state.getState(),
-                        state.getDepthInBlocks()));
             }
         }
 
@@ -133,9 +120,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void transactionsOrStatesChanged(Transactions transactions) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
-                logger.info(String.format("%s transaction count or state changed: Count %d",
-                        invoiceId,
-                        transactions.size()));
             }
         }
     };
