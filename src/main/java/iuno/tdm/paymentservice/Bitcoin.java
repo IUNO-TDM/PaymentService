@@ -472,23 +472,31 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
             }
         }
 
-        logger.info("Balance: " + w.getBalance().toFriendlyString());
+        logWalletBalance(w);
+    }
+
+    private void logWalletBalance(Wallet w) {
+        logger.info(String.format("Balance: %s (%s est.)",
+                w.getBalance(Wallet.BalanceType.AVAILABLE_SPENDABLE).toFriendlyString(),
+                w.getBalance(Wallet.BalanceType.ESTIMATED_SPENDABLE).toFriendlyString()
+        ));
     }
 
     private int blockHeight = 0;
     @Override
     public void onWalletChanged(Wallet w) {
         int newBlockHeight = w.getLastBlockSeenHeight();
-        if (blockHeight < newBlockHeight)
+        if (blockHeight < newBlockHeight) {
             tryFinishAllInvoices();
+            safeMoney(w);
+            logWalletBalance(w);
+        }
         blockHeight = newBlockHeight; // assign, in case blocks have been reordered
 
         // cleanup expired transactions
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
-
-        safeMoney(w);
     }
 
     private void safeMoney(Wallet w) {
