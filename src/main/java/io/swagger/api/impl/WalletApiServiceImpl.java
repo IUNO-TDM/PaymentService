@@ -1,11 +1,8 @@
 package io.swagger.api.impl;
 
-import io.swagger.api.*;
-
-import io.swagger.model.Balance;
-
 import io.swagger.api.NotFoundException;
-
+import io.swagger.api.WalletApiService;
+import io.swagger.model.Balance;
 import iuno.tdm.paymentservice.Bitcoin;
 
 import javax.ws.rs.core.Response;

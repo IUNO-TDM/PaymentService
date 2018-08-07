@@ -30,3 +30,9 @@ To create a wallet from a given seed use the parameter ```walletSeed``` on the f
 ```
 mvn jetty:run -DwalletSeed=never,drop,fragile,orange,artwork,picture,off,balcony,over,seven,potato,people
 ```
+
+
+if wallet contains twice the amount if the required minimum cash liquidity, spare money is sent to the savings address
+```
+mvn jetty:run -DsavingsAddress=mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2 -DminimumCash=100000000
+```

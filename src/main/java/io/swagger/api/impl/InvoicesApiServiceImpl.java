@@ -1,31 +1,24 @@
 package io.swagger.api.impl;
 
-import io.swagger.api.*;
-
-import io.swagger.model.AddressValuePair;
-import io.swagger.model.Coupon;
-import io.swagger.model.Error;
-import io.swagger.model.Invoice;
-import io.swagger.model.State;
-import io.swagger.model.Transactions;
-
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.util.Set;
-import java.util.UUID;
-
-import java.util.List;
+import io.swagger.api.ApiResponseMessage;
+import io.swagger.api.InvoicesApiService;
 import io.swagger.api.NotFoundException;
-
+import io.swagger.model.*;
+import io.swagger.model.Error;
+import iuno.tdm.paymentservice.Bitcoin;
 import org.bitcoinj.core.AddressFormatException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.SecurityContext;
-
-import iuno.tdm.paymentservice.Bitcoin;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 @javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-07-25T13:00:10.686Z")
 public class InvoicesApiServiceImpl extends InvoicesApiService {
