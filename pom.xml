@@ -248,7 +248,7 @@
         <walletSeed>never,use,this,seed,never,use,this,seed,never,use,this,seed</walletSeed>
         <walletPassphrase/>
         <walletCreationTime>1504199300</walletCreationTime>
-        <savingsAddress>2MyHrRkGjdsvUo5bVXX8QHDwEqGg8XW2QYY</savingsAddress>
+        <savingsAddress>mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2</savingsAddress>
         <minimumCash>1000000</minimumCash>
     </properties>
 </project>

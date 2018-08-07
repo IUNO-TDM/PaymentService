@@ -57,7 +57,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
     private final static int CLEANUPINTERVAL = 20; // clean up every n minutes
 
     private final Coin minimumCash = Coin.valueOf(Long.parseLong(System.getProperty("minimumCash", "500000")));
-    private final String savingsAddressString = System.getProperty("savingsAddress", "2MyHrRkGjdsvUo5bVXX8QHDwEqGg8XW2QYY");
+    private final String savingsAddressString = System.getProperty("savingsAddress", "mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2");
     private Address savingsAddress;
 
     private Wallet wallet = null;
