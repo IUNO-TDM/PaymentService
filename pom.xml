@@ -4,7 +4,7 @@
     <artifactId>payment-service</artifactId>
     <packaging>war</packaging>
     <name>Payment Service</name>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 
     <licenses>
         <license>
@@ -67,6 +67,14 @@
                         <systemProperty>
                             <name>walletCreationTime</name>
                             <value>${walletCreationTime}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>savingsAddress</name>
+                            <value>${savingsAddress}</value>
+                        </systemProperty>
+                        <systemProperty>
+                            <name>minimumCash</name>
+                            <value>${minimumCash}</value>
                         </systemProperty>
                     </systemProperties>
                 </configuration>
@@ -192,7 +200,7 @@
         <dependency>
             <groupId>org.bitcoinj</groupId>
             <artifactId>bitcoinj-core</artifactId>
-            <version>0.14.5</version>
+            <version>0.14.7</version>
             <scope>compile</scope>
         </dependency>
 
@@ -226,19 +234,21 @@
         <java.version>1.8</java.version>
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <swagger-core-version>1.5.12</swagger-core-version>
+        <swagger-core-version>1.5.19</swagger-core-version>
         <jetty-version>9.2.9.v20150224</jetty-version>
         <jersey2-version>2.22.2</jersey2-version>
-        <jackson-version>2.8.7</jackson-version>
+        <jackson-version>2.9.5</jackson-version>
         <junit-version>4.12</junit-version>
-        <logback-version>1.1.7</logback-version>
+        <logback-version>1.2.0</logback-version>
         <servlet-api-version>2.5</servlet-api-version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <listening-interface>localhost</listening-interface>
         <listening-port>8080</listening-port>
         <automaticallyRecoverBrokenWallet>true</automaticallyRecoverBrokenWallet>
         <walletSeed>never,use,this,seed,never,use,this,seed,never,use,this,seed</walletSeed>
-        <walletPassphrase></walletPassphrase>
+        <walletPassphrase/>
         <walletCreationTime>1504199300</walletCreationTime>
+        <savingsAddress>mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2</savingsAddress>
+        <minimumCash>1000000</minimumCash>
     </properties>
 </project>

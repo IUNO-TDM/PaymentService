@@ -1,15 +1,16 @@
 package io.swagger.api;
 
 import io.swagger.jaxrs.config.SwaggerContextService;
-import io.swagger.models.*;
-
-import javax.servlet.http.HttpServlet;
-import javax.servlet.ServletContext;
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-
+import io.swagger.models.Contact;
+import io.swagger.models.Info;
+import io.swagger.models.License;
+import io.swagger.models.Swagger;
 import iuno.tdm.paymentservice.Bitcoin;
 
+import javax.servlet.ServletConfig;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import java.util.Enumeration;
 import java.util.HashMap;
 

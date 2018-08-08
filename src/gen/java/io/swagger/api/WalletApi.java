@@ -10,6 +10,7 @@ import io.swagger.jaxrs.*;
 import io.swagger.model.Balance;
 import io.swagger.model.Error;
 
+import java.util.Map;
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
@@ -29,7 +30,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the wallet API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T11:48:32.147Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-07-25T13:00:10.686Z")
 public class WalletApi  {
    private final WalletApiService delegate;
 
@@ -62,7 +63,7 @@ public class WalletApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "Balance with all UTXO and confident balance", response = Balance.class),
         
-        @io.swagger.annotations.ApiResponse(code = 503, message = "service unavailable", response = Balance.class) })
+        @io.swagger.annotations.ApiResponse(code = 503, message = "service unavailable", response = Error.class) })
     public Response getWalletBalance(@Context SecurityContext securityContext)
     throws NotFoundException {
         return delegate.getWalletBalance(securityContext);
