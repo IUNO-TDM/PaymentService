@@ -118,9 +118,12 @@ function stateChange(txPrefix, data){
 
     if ('pending' == data.state) {
         if ("p-" == txPrefix) showWaitMark();
-        barElement.style.width = seenByPeers + '%';
         document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
+        barElement.classList.add('bg-warning');
+        barElement.classList.remove('bg-success');
+        barElement.classList.remove('bg-danger');
+        barElement.style.width = seenByPeers + '%';
 
     } else if ('building' == data.state) {
         if ("p-" == txPrefix) showCheckMark();
@@ -128,12 +131,16 @@ function stateChange(txPrefix, data){
         document.getElementById(txPrefix+'confidenceV').innerHTML = depthInBlocks;
         barElement.classList.add('bg-success');
         barElement.classList.remove('bg-warning');
+        barElement.classList.remove('bg-danger');
         barElement.style.width = depthInBlocks/6*100 + '%';
 
     } else {
         if ("p-" == txPrefix) showFailMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Confidence:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = "n/a";
+        barElement.classList.add('bg-danger');
+        barElement.classList.remove('bg-warning');
+        barElement.classList.remove('bg-success');
     }
 
 }
