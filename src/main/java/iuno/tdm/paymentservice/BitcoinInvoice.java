@@ -417,8 +417,12 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService",
-                "Thank you! :)");
+        // https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki defines
+        // label: Label for that address (e.g. name of receiver)
+        // message: message that describes the transaction to the user
+        String label = String.format("IUNO %1$s (%2$s)", referenceId, invoiceId);
+        String message = String.format("Reference %1$s", referenceId);
+        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), label, message);
     }
 
     /**
