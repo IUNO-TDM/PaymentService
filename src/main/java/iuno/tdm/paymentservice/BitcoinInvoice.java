@@ -194,7 +194,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         addTransfersToTx(tx);
         SendRequest sr = SendRequest.forTx(tx);
         sr.coinSelector = new CouponCoinSelector();
-        sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        // sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
         if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
             sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
