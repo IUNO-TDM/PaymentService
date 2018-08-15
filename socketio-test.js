@@ -81,7 +81,7 @@ socket.on('connect', function(){
     http.setRequestHeader("Content-type", "application/json");
 
     http.onreadystatechange = function() {//Call a function when the state changes.
-        if(http.readyState === 4 && http.status === 201) {
+        if (http.readyState === 4 && http.status === 201) {
             console.log('Invoice Created:');
             console.log(http.responseText);
             const jsonData = JSON.parse(http.responseText);
@@ -102,6 +102,12 @@ socket.on('connect', function(){
                 }
             });
             request.send();
+        } else if (http.readyState === 4 && http.status === 503) {
+            setTimeout( function() {
+                http.open("POST", url, true);
+                http.setRequestHeader("Content-type", "application/json");
+                http.send(JSON.stringify(invoice));
+            }, 2000);
         }
     };
     http.send(JSON.stringify(invoice));
