@@ -108,6 +108,8 @@ socket.on('connect', function(){
                 http.setRequestHeader("Content-type", "application/json");
                 http.send(JSON.stringify(invoice));
             }, 2000);
+        } else {
+            showFailMark();
         }
     };
     http.send(JSON.stringify(invoice));
@@ -169,18 +171,10 @@ function resetPage() {
     $('#invoice').html('');
     $('#PaymentStateChange').html('');
     $('#TransferStateChange').html('');
-    $('#StateChange').html('');
     $('#PayingTransactionsChange').html('');
     $('#TransferTransactionsChange').html('');
     $('#log').html('...');
 }
-
-socket.on('StateChange', function(data){
-    console.log('StateChange: ' + data);
-    const jd = JSON.parse(data);
-    document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    $('#StateChange').html(library.json.prettyPrint(jd));
-});
 
 socket.on('PaymentStateChange', function(data){
     console.log('PaymentStateChange: ' + data);

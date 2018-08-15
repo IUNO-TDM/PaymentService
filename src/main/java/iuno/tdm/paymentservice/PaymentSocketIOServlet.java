@@ -54,7 +54,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
 
     @Override
     public void onPaymentStateChanged(BitcoinInvoice invoice, State state, Transaction tx, Transactions txList) {
-        stateChanged("StateChange", invoice.getInvoice(), state, tx, txList); // deprecated
         stateChanged("PaymentStateChange", invoice.getInvoice(), state, tx, txList);
     }
 
