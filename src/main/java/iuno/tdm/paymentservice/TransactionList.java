@@ -44,8 +44,8 @@ public class TransactionList implements TransactionConfidence.Listener {
         transaction.getConfidence().addEventListener(this);
 
         logger.debug("Added tx " + transaction.getHashAsString() + " to TransactionList. Registered transactions");
-        logger.debug("This list has now " + transactions.size() + " transactions");
-        informStateListenersTransactionsChanged(getTransactions());
+        logger.debug("This list contains now " + transactions.size() + " transactions");
+        publishMostConfidentTransaction();
     }
 
     void addStateListener(TransactionListStateListener listener) {
@@ -245,13 +245,15 @@ public class TransactionList implements TransactionConfidence.Listener {
                 reason.toString()));
 
 
+        publishMostConfidentTransaction();
+    }
+
+    private void publishMostConfidentTransaction() {
         Transaction bestTx = getMostConfidentTransaction();
         TransactionConfidence bestConfidence = bestTx.getConfidence();
         State bestState = mapConfidenceToState(bestConfidence);
 
         informStateListenersMostConfidentState(bestTx, bestState, getTransactions());
-
-        informStateListenersTransactionsChanged(getTransactions());
     }
 
     private void informStateListenersMostConfidentState(Transaction tx, State newState, Transactions txList) {
@@ -259,12 +261,4 @@ public class TransactionList implements TransactionConfidence.Listener {
             listener.mostConfidentTxStateChanged(tx, newState, txList);
         }
     }
-
-    @Deprecated
-    private void informStateListenersTransactionsChanged(Transactions transactions) {
-        for (TransactionListStateListener listener : listeners) {
-            listener.transactionsOrStatesChanged(transactions);
-        }
-    }
-
 }

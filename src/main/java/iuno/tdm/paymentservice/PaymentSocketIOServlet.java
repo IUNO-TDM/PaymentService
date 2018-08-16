@@ -62,18 +62,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
         stateChanged("TransferStateChange", invoice.getInvoice(), state, tx, txList);
     }
 
-    @Deprecated
-    @Override
-    public void onPayingTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        invoicePayingTransactionsChanged(invoice.getInvoice(), transactions);
-    }
-
-    @Deprecated
-    @Override
-    public void onTransferTransactionsChanged(BitcoinInvoice invoice, Transactions transactions) {
-        invoiceTransferTransactionsChanged(invoice.getInvoice(), transactions);
-    }
-
     public void stateChanged(String eventName, Invoice invoice, State state, Transaction tx, Transactions txList) {
         try {
             String jsonString = buildStateJsonString(invoice, state, tx, txList);
@@ -81,28 +69,6 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
             of("/invoices").in(roomId).emit(eventName, jsonString);
         } catch (SocketIOException e) {
             logger.error("SocketIOException in onPayingStateChanged ", e);
-        }
-    }
-
-    @Deprecated
-    public void invoicePayingTransactionsChanged(Invoice invoice, Transactions transactions) {
-        try {
-            String jsonString = buildTransactionsJsonString(invoice, transactions);
-            String roomId = invoice.getInvoiceId().toString();
-            of("/invoices").in(roomId).emit("PayingTransactionsChange", jsonString);
-        } catch (SocketIOException e) {
-            logger.error("SocketIOException in PayingTransactionsChange ", e);
-        }
-    }
-
-    @Deprecated
-    public void invoiceTransferTransactionsChanged(Invoice invoice, Transactions transactions) {
-        try {
-            String jsonString = buildTransactionsJsonString(invoice, transactions);
-            String roomId = invoice.getInvoiceId().toString();
-            of("/invoices").in(roomId).emit("TransferTransactionsChange", jsonString);
-        } catch (SocketIOException e) {
-            logger.error("SocketIOException in TransferTransactionsChange ", e);
         }
     }
 
@@ -126,23 +92,5 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
             );
 
          return jsonObject.toString();
-    }
-
-    @Deprecated
-    private static String buildTransactionsJsonString(Invoice invoice, Transactions transactions) {
-        JSONObject bar = new JSONObject()
-                .put("invoiceId", invoice.getInvoiceId())
-                .put("referenceId", invoice.getReferenceId());
-
-        for (TransactionsInner ti : transactions)
-            bar.append("transactions", new JSONObject()
-                    .put("transaction", ti.getTransactionId())
-                    .put("state", new JSONObject()
-                            .put("state", ti.getState().getState())
-                            .put("depthInBlocks", ti.getState().getDepthInBlocks())
-                            .put("seenByPeers", ti.getState().getSeenByPeers()))
-            );
-
-        return bar.toString();
     }
 }

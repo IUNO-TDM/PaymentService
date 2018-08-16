@@ -97,14 +97,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                 bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
             }
         }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
-            }
-        }
     };
 
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
@@ -112,14 +104,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
-            }
-        }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
             }
         }
     };
