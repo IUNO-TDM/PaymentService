@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
 <web-app version="2.4" xmlns="http://java.sun.com/xml/ns/j2ee"
-  xmlns:j2ee="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee    http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
+         xmlns:j2ee="http://java.sun.com/xml/ns/j2ee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://java.sun.com/xml/ns/j2ee    http://java.sun.com/xml/ns/j2ee/web-app_2_4.xsd">
 
     <servlet>
         <servlet-name>jersey</servlet-name>
@@ -61,10 +61,21 @@
         </init-param>
         <load-on-startup>3</load-on-startup> <!-- must be started after SocketIO to get object reference via context -->
     </servlet>
+
+    <servlet>
+        <servlet-name>default></servlet-name>
+        <servlet-class>org.eclipse.jetty.servlet.DefaultServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>default</servlet-name>
+        <url-pattern>/*</url-pattern>
+    </servlet-mapping>
+
     <servlet-mapping>
         <servlet-name>jersey</servlet-name>
         <url-pattern>/v1/*</url-pattern>
     </servlet-mapping>
+
     <servlet-mapping>
         <servlet-name>PaymentSocketIOServlet</servlet-name>
         <url-pattern>/socket.io/*</url-pattern>
@@ -74,6 +85,7 @@
         <servlet-class>iuno.tdm.paymentservice.PaymentSocketIOServlet</servlet-class>
         <load-on-startup>2</load-on-startup> <!-- must be started before Bootstrap to pass object reference via context -->
     </servlet>
+
     <filter>
         <filter-name>ApiOriginFilter</filter-name>
         <filter-class>io.swagger.api.ApiOriginFilter</filter-class>
