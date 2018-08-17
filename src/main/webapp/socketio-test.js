@@ -64,7 +64,7 @@ function showFailMark() {
     document.getElementById("failmark").style.display="block";
 }
 
-var socket = io('http://localhost:8080/invoices', {
+var socket = io('/invoices', {
     transports: ['websocket']
 });
 
@@ -74,7 +74,7 @@ socket.on('connect', function(){
     resetPage();
 
     var http = new XMLHttpRequest();
-    var url = "http://localhost:8080/v1/invoices";
+    var url = "/v1/invoices";
     http.open("POST", url, true);
 
     //Send the proper header information along with the request
@@ -91,7 +91,7 @@ socket.on('connect', function(){
             document.getElementById("invoiceId").innerHTML = jsonData.invoiceId;
 
             var request = new XMLHttpRequest();
-            request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
+            request.open("GET","/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
             request.addEventListener('load', function(event) {
                 if (request.status >= 200 && request.status < 300) {
                     console.log(request.responseText);
