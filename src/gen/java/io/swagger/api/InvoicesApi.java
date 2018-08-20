@@ -15,6 +15,7 @@ import io.swagger.model.State;
 import io.swagger.model.Transactions;
 import java.util.UUID;
 
+import java.util.Map;
 import java.util.List;
 import io.swagger.api.NotFoundException;
 
@@ -34,7 +35,7 @@ import javax.validation.constraints.*;
 @Consumes({ "application/json" })
 @Produces({ "application/json", "text/plain" })
 @io.swagger.annotations.Api(description = "the invoices API")
-@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-02-15T11:48:32.147Z")
+@javax.annotation.Generated(value = "io.swagger.codegen.languages.JavaJerseyServerCodegen", date = "2018-07-25T13:00:10.686Z")
 public class InvoicesApi  {
    private final InvoicesApiService delegate;
 
@@ -67,13 +68,13 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 201, message = "returns the balance of the new coupon", response = AddressValuePair.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice id not found", response = AddressValuePair.class),
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice id not found", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 409, message = "invoice already closed", response = AddressValuePair.class),
+        @io.swagger.annotations.ApiResponse(code = 409, message = "invoice already closed", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 422, message = "coupon code is invalid", response = AddressValuePair.class),
+        @io.swagger.annotations.ApiResponse(code = 422, message = "coupon code is invalid", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 503, message = "balance of coupon could not be retrieved", response = AddressValuePair.class) })
+        @io.swagger.annotations.ApiResponse(code = 503, message = "balance of coupon could not be retrieved", response = Error.class) })
     public Response addCouponToInvoice(@ApiParam(value = "the id of the invoice the coupon is for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@ApiParam(value = "coupon code" ,required=true) Coupon coupon
 ,@Context SecurityContext securityContext)
@@ -88,9 +89,9 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 201, message = "id of new invoice", response = Invoice.class),
         
-        @io.swagger.annotations.ApiResponse(code = 400, message = "bad request", response = Invoice.class),
+        @io.swagger.annotations.ApiResponse(code = 400, message = "bad request", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 503, message = "service unavailable", response = Invoice.class) })
+        @io.swagger.annotations.ApiResponse(code = 503, message = "service unavailable", response = Error.class) })
     public Response addInvoice(@ApiParam(value = "one new invoice" ,required=true) Invoice invoice
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -100,11 +101,11 @@ public class InvoicesApi  {
     @Path("/{invoiceId}")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
-    @io.swagger.annotations.ApiOperation(value = "Deletes the invoice to the provided ID.", notes = "", response = void.class, tags={  })
+    @io.swagger.annotations.ApiOperation(value = "Deletes the invoice to the provided ID.", notes = "", response = Void.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
-        @io.swagger.annotations.ApiResponse(code = 200, message = "invoice deleted", response = void.class),
+        @io.swagger.annotations.ApiResponse(code = 200, message = "invoice deleted", response = Void.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = void.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response deleteInvoiceById(@ApiParam(value = "the id of the invoice to delete",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -118,7 +119,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the Bip21 URI for the invoice", response = String.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = String.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response getInvoiceBip21(@ApiParam(value = "the invoice id to get the Bip21 URI for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -132,7 +133,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the information about the invoice", response = Invoice.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Invoice.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response getInvoiceById(@ApiParam(value = "the invoice id to get the information for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -146,7 +147,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the balance of the coupon", response = AddressValuePair.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "object not found", response = AddressValuePair.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "object not found", response = Error.class) })
     public Response getInvoiceCouponBalance(@ApiParam(value = "the id of the invoice to get the coupons balance for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@ApiParam(value = "the address of the coupon to get the balance for",required=true) @PathParam("couponAddress") String couponAddress
 ,@Context SecurityContext securityContext)
@@ -161,7 +162,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the balance for each coupon", response = AddressValuePair.class, responseContainer = "List"),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice id not found", response = AddressValuePair.class, responseContainer = "List") })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice id not found", response = Error.class) })
     public Response getInvoiceCoupons(@ApiParam(value = "the id of the invoice to get the coupons balances for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -175,7 +176,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = Transactions.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Transactions.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response getInvoicePayingTransactions(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -185,11 +186,11 @@ public class InvoicesApi  {
     @Path("/{invoiceId}/state")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
-    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the incoming tx.", notes = "", response = State.class, tags={  })
+    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the most confident incoming tx.", notes = "", response = State.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the incoming tx", response = State.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = State.class) })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response getInvoiceState(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -199,13 +200,13 @@ public class InvoicesApi  {
     @Path("/{invoiceId}/transferState")
     @Consumes({ "application/json" })
     @Produces({ "application/json", "text/plain" })
-    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the transfer tx.", notes = "", response = State.class, tags={  })
+    @io.swagger.annotations.ApiOperation(value = "Returns a confidence object that describes the state of the most confident transfer tx.", notes = "", response = State.class, tags={  })
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = State.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = State.class),
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 423, message = "no transfer state because there are no transfers in the invoice", response = State.class) })
+        @io.swagger.annotations.ApiResponse(code = 423, message = "no transfer state because there are no transfers in the invoice", response = Error.class) })
     public Response getInvoiceTransferState(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -219,9 +220,9 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the state object of the transfer tx", response = Transactions.class),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Transactions.class),
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class),
         
-        @io.swagger.annotations.ApiResponse(code = 423, message = "no tx because there are no transfers in the invoice", response = Transactions.class) })
+        @io.swagger.annotations.ApiResponse(code = 423, message = "no tx because there are no transfers in the invoice", response = Error.class) })
     public Response getInvoiceTransferTransactions(@ApiParam(value = "the invoice id to get the state for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
@@ -235,7 +236,7 @@ public class InvoicesApi  {
     @io.swagger.annotations.ApiResponses(value = { 
         @io.swagger.annotations.ApiResponse(code = 200, message = "returns the address value pairs for the invoice as array", response = AddressValuePair.class, responseContainer = "List"),
         
-        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = AddressValuePair.class, responseContainer = "List") })
+        @io.swagger.annotations.ApiResponse(code = 404, message = "invoice not found", response = Error.class) })
     public Response getInvoiceTransfers(@ApiParam(value = "the invoice id to get transfers for",required=true) @PathParam("invoiceId") UUID invoiceId
 ,@Context SecurityContext securityContext)
     throws NotFoundException {
