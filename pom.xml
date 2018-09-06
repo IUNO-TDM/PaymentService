@@ -250,5 +250,6 @@
         <walletCreationTime>1504199300</walletCreationTime>
         <savingsAddress>mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2</savingsAddress>
         <minimumCash>5000000</minimumCash>
+        <useIncomingPaymentForTransfers>true</useIncomingPaymentForTransfers>
     </properties>
 </project>
