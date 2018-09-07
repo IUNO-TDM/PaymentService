@@ -80,6 +80,17 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     private static String blockexplorerUser = "";
     private static String blockexplorerPasswd = "";
 
+    /**
+     * works around delays due to tx floods by using the ouputs of an incoming payment transaction for an invoice
+     * as inputs for te invoices transfer transaction
+     * while allowing malleability to break the transfer transaction
+     */
+    private boolean useIncomingPaymentForTransfers;
+
+    public void setUseIncomingPaymentForTransfers(boolean useIncomingPaymentForTransfers) {
+        this.useIncomingPaymentForTransfers = useIncomingPaymentForTransfers;
+    }
+
     private static final String PARAM_KEY_BE_ADDR = "blockexplorer-addr";
     private static final String PARAM_KEY_BE_USER = "blockexplorer-user";
     private static final String PARAM_KEY_BE_PASSWD = "blockexplorer-passwd";
@@ -372,6 +383,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         couponWallet.addChangeEventListener(this); // FIXME add appropriate call to remove the listener
         couponWallet.addTransactionConfidenceEventListener(this); // FIXME add appropriate call to remove the listener
+        useIncomingPaymentForTransfers = true;
     }
 
     @Override
@@ -503,11 +515,9 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         Transaction tx = new Transaction(params);
 
-// commented as workaround for a bug in bitcoinj, see https://github.com/IUNO-TDM/PaymentService/issues/51
-//        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-//        if (incomingTxList.isOneOrMoreTxConfirmed())
-//            for (TransactionInput txin : getInputs())
-//                tx.addInput(txin);
+        if (useIncomingPaymentForTransfers)
+            for (TransactionInput txin : getInputs())
+                tx.addInput(txin);
 
         addTransfersToTx(tx);
 
