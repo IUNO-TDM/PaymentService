@@ -36,3 +36,12 @@ if wallet contains twice the amount if the required minimum cash liquidity, spar
 ```
 mvn jetty:run -DsavingsAddress=mgSgVGAaz7H99vLB4gAqH3f7Qr1jpcLoy2 -DminimumCash=100000000
 ```
+
+works around delays due to tx floods by using the ouputs of an incoming payment transaction for an invoice
+as inputs for te invoices transfer transaction
+while allowing malleability to break the transfer transaction
+
+default is ```true```; set to ```false``` to prevent malleability breaking transfer payments
+```
+mvn jetty:run -DuseIncomingPaymentForTransfers=true
+```
