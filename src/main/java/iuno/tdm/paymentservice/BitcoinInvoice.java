@@ -108,14 +108,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                 bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
             }
         }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
-            }
-        }
     };
 
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
@@ -123,14 +115,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
-            }
-        }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
             }
         }
     };
@@ -205,7 +189,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         addTransfersToTx(tx);
         SendRequest sr = SendRequest.forTx(tx);
         sr.coinSelector = new CouponCoinSelector();
-        sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        // sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
         if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
             sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
@@ -429,8 +413,12 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService",
-                "Thank you! :)");
+        // https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki defines
+        // label: Label for that address (e.g. name of receiver)
+        // message: message that describes the transaction to the user
+        String label = String.format("IUNO %1$s (%2$s)", referenceId, invoiceId);
+        String message = String.format("Reference %1$s", referenceId);
+        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), label, message);
     }
 
     /**

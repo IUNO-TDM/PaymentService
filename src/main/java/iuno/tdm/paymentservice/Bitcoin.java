@@ -275,7 +275,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
                     .div(count);
 
             SendRequest sr = SendRequest.to(addr, amount);
-            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            // sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
             try
             {
