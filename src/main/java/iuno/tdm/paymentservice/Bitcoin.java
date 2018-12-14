@@ -498,6 +498,17 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         if (lastCleanup.plusMinutes(CLEANUPINTERVAL).isBeforeNow()) {
             cleanUpInvoices();
         }
+
+        // check and limit number of connected peers
+        // this workaround disconnects half of the excessive connected peers
+        int numberOfPeersToDisconnect = (peerGroup.numConnectedPeers() - peerGroup.getMaxConnections()) / 2;
+        if (0 < numberOfPeersToDisconnect)
+            logger.info("disconnecting " + numberOfPeersToDisconnect + " peers");
+        List<Peer> peers = peerGroup.getConnectedPeers();
+        while (0 < numberOfPeersToDisconnect) {
+            numberOfPeersToDisconnect--;
+            peers.get(numberOfPeersToDisconnect).close();
+        }
     }
 
     private void safeMoney(Wallet w) {
