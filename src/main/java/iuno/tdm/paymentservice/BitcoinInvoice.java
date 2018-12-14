@@ -80,6 +80,17 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
     private static String blockexplorerUser = "";
     private static String blockexplorerPasswd = "";
 
+    /**
+     * works around delays due to tx floods by using the ouputs of an incoming payment transaction for an invoice
+     * as inputs for te invoices transfer transaction
+     * while allowing malleability to break the transfer transaction
+     */
+    private boolean useIncomingPaymentForTransfers;
+
+    public void setUseIncomingPaymentForTransfers(boolean useIncomingPaymentForTransfers) {
+        this.useIncomingPaymentForTransfers = useIncomingPaymentForTransfers;
+    }
+
     private static final String PARAM_KEY_BE_ADDR = "blockexplorer-addr";
     private static final String PARAM_KEY_BE_USER = "blockexplorer-user";
     private static final String PARAM_KEY_BE_PASSWD = "blockexplorer-passwd";
@@ -97,14 +108,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
                 bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
             }
         }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPayingTransactionsChanged(BitcoinInvoice.this, transactions);
-            }
-        }
     };
 
     private TransactionListStateListener transferTxStateListener = new TransactionListStateListener() {
@@ -112,14 +115,6 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
                 bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
-            }
-        }
-
-        @Deprecated
-        @Override
-        public void transactionsOrStatesChanged(Transactions transactions) {
-            if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferTransactionsChanged(BitcoinInvoice.this, transactions);
             }
         }
     };
@@ -194,7 +189,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         addTransfersToTx(tx);
         SendRequest sr = SendRequest.forTx(tx);
         sr.coinSelector = new CouponCoinSelector();
-        sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+        // sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
         if (balance.getValue() > (totalAmount + 2 * Transaction.MIN_NONDUST_OUTPUT.getValue())) {
             sr.tx.addOutput(Coin.valueOf(totalAmount - transferAmount), transferAddress);
@@ -372,6 +367,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         couponWallet.addChangeEventListener(this); // FIXME add appropriate call to remove the listener
         couponWallet.addTransactionConfidenceEventListener(this); // FIXME add appropriate call to remove the listener
+        useIncomingPaymentForTransfers = true;
     }
 
     @Override
@@ -417,8 +413,12 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
      * @return BIP21 payment request string
      */
     String getBip21URI() {
-        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), "PaymentService",
-                "Thank you! :)");
+        // https://github.com/bitcoin/bips/blob/master/bip-0021.mediawiki defines
+        // label: Label for that address (e.g. name of receiver)
+        // message: message that describes the transaction to the user
+        String label = String.format("IUNO %1$s (%2$s)", referenceId, invoiceId);
+        String message = String.format("Reference %1$s", referenceId);
+        return BitcoinURI.convertToBitcoinURI(receiveAddress, Coin.valueOf(totalAmount), label, message);
     }
 
     /**
@@ -503,11 +503,9 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
 
         Transaction tx = new Transaction(params);
 
-// commented as workaround for a bug in bitcoinj, see https://github.com/IUNO-TDM/PaymentService/issues/51
-//        // add inputs from incoming payment only if transaction is already included in a block to prevent malleability
-//        if (incomingTxList.isOneOrMoreTxConfirmed())
-//            for (TransactionInput txin : getInputs())
-//                tx.addInput(txin);
+        if (useIncomingPaymentForTransfers)
+            for (TransactionInput txin : getInputs())
+                tx.addInput(txin);
 
         addTransfersToTx(tx);
 

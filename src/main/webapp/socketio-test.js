@@ -1,12 +1,12 @@
 console.log('Starting Websocket Client');
 
 var invoice = {
-    totalAmount: 2000000,
+    totalAmount: 200000,
     referenceId: 'Brot',
-    expiration: new Date(new Date().getTime() + (2 * 60 * 60 * 1000)).toISOString(),
+    expiration: new Date(new Date().getTime() + (7 * 24 * 60 * 60 * 1000)).toISOString(),
     transfers: [{
         address: pubkeys[Math.floor(Math.random()*pubkeys.length)] || 'n2oGNcjsnzB34UYdAvipFoEyR9z4qnLsd5',
-        coin: 1000000
+        coin: 100000
     }]
 };
 
@@ -64,7 +64,7 @@ function showFailMark() {
     document.getElementById("failmark").style.display="block";
 }
 
-var socket = io('http://localhost:8080/invoices', {
+var socket = io('/invoices', {
     transports: ['websocket']
 });
 
@@ -74,14 +74,14 @@ socket.on('connect', function(){
     resetPage();
 
     var http = new XMLHttpRequest();
-    var url = "http://localhost:8080/v1/invoices";
+    var url = "/v1/invoices";
     http.open("POST", url, true);
 
     //Send the proper header information along with the request
     http.setRequestHeader("Content-type", "application/json");
 
     http.onreadystatechange = function() {//Call a function when the state changes.
-        if(http.readyState === 4 && http.status === 201) {
+        if (http.readyState === 4 && http.status === 201) {
             console.log('Invoice Created:');
             console.log(http.responseText);
             const jsonData = JSON.parse(http.responseText);
@@ -91,7 +91,7 @@ socket.on('connect', function(){
             document.getElementById("invoiceId").innerHTML = jsonData.invoiceId;
 
             var request = new XMLHttpRequest();
-            request.open("GET","http://localhost:8080/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
+            request.open("GET","/v1/invoices/" + jsonData['invoiceId'] + '/bip21');
             request.addEventListener('load', function(event) {
                 if (request.status >= 200 && request.status < 300) {
                     console.log(request.responseText);
@@ -102,6 +102,14 @@ socket.on('connect', function(){
                 }
             });
             request.send();
+        } else if (http.readyState === 4 && http.status === 503) {
+            setTimeout( function() {
+                http.open("POST", url, true);
+                http.setRequestHeader("Content-type", "application/json");
+                http.send(JSON.stringify(invoice));
+            }, 2000);
+        } else {
+            showFailMark();
         }
     };
     http.send(JSON.stringify(invoice));
@@ -115,12 +123,16 @@ function stateChange(txPrefix, data){
 
     var depthInBlocks = data.depthInBlocks;
     var seenByPeers = data.seenByPeers;
+    $('#' + txPrefix + 'txid').html('<a href="https://www.blocktrail.com/tBTC/tx/' + data.txid + '">' + data.txid + '</a>');
 
     if ('pending' == data.state) {
         if ("p-" == txPrefix) showWaitMark();
-        barElement.style.width = seenByPeers + '%';
         document.getElementById(txPrefix+'confidence').innerHTML = "Seen by peers:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = seenByPeers;
+        barElement.classList.add('bg-warning');
+        barElement.classList.remove('bg-success');
+        barElement.classList.remove('bg-danger');
+        barElement.style.width = seenByPeers + '%';
 
     } else if ('building' == data.state) {
         if ("p-" == txPrefix) showCheckMark();
@@ -128,12 +140,16 @@ function stateChange(txPrefix, data){
         document.getElementById(txPrefix+'confidenceV').innerHTML = depthInBlocks;
         barElement.classList.add('bg-success');
         barElement.classList.remove('bg-warning');
+        barElement.classList.remove('bg-danger');
         barElement.style.width = depthInBlocks/6*100 + '%';
 
     } else {
         if ("p-" == txPrefix) showFailMark();
         document.getElementById(txPrefix+'confidence').innerHTML = "Confidence:";
         document.getElementById(txPrefix+'confidenceV').innerHTML = "n/a";
+        barElement.classList.add('bg-danger');
+        barElement.classList.remove('bg-warning');
+        barElement.classList.remove('bg-success');
     }
 
 }
@@ -156,30 +172,20 @@ function resetPage() {
     $('#invoice').html('');
     $('#PaymentStateChange').html('');
     $('#TransferStateChange').html('');
-    $('#StateChange').html('');
     $('#PayingTransactionsChange').html('');
     $('#TransferTransactionsChange').html('');
     $('#log').html('...');
 }
-
-socket.on('StateChange', function(data){
-    console.log('StateChange: ' + data);
-    const jd = JSON.parse(data);
-    document.getElementById('log').innerHTML = 'StateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    $('#StateChange').html(library.json.prettyPrint(jd));
-});
 
 socket.on('PaymentStateChange', function(data){
     console.log('PaymentStateChange: ' + data);
     const jd = JSON.parse(data);
     document.getElementById('log').innerHTML = 'PaymentStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     $('#PaymentStateChange').html(library.json.prettyPrint(jd));
-
     stateChange('p-', jd);
 
     $('#progressbar').width(jd.depthInBlocks/6*100 + '%');
 });
-
 
 socket.on('TransferStateChange', function(data){
     console.log('TransferStateChange: ' + data);
@@ -187,24 +193,6 @@ socket.on('TransferStateChange', function(data){
     document.getElementById('log').innerHTML = 'TransferStateChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
     $('#TransferStateChange').html(library.json.prettyPrint(jd));
     stateChange('t-', jd);
-});
-
-socket.on('PayingTransactionsChange', function(data){
-    console.log('PayingTransactionsChange: ' + data);
-    const jd = JSON.parse(data);
-    document.getElementById('log').innerHTML = 'PayingTransactionsChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    var txid=jd.transactions[0].transaction;
-    document.getElementById('p-txid').innerHTML = '<a href="https://www.blocktrail.com/tBTC/tx/' + txid + '">' + txid + '</a>';
-    $('#PayingTransactionsChange').html(library.json.prettyPrint(jd));
-});
-
-socket.on('TransferTransactionsChange', function(data){
-    console.log('TransferTransactionsChange: ' + data);
-    const jd = JSON.parse(data);
-    document.getElementById('log').innerHTML = 'TransferTransactionChange: ' + data + '<br>' + document.getElementById('log').innerHTML;
-    var txid=jd.transactions[0].transaction;
-    document.getElementById('t-txid').innerHTML = '<a href="https://www.blocktrail.com/tBTC/tx/' + txid + '">' + txid + '</a>';
-    $('#TransferTransactionsChange').html(library.json.prettyPrint(jd));
 });
 
 socket.on('disconnect', function(){

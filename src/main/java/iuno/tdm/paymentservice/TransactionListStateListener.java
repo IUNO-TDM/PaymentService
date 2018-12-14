@@ -11,5 +11,4 @@ public interface TransactionListStateListener {
 
     void mostConfidentTxStateChanged(Transaction transactions, State state, Transactions txList);
 
-    void transactionsOrStatesChanged(Transactions transactions);
 }

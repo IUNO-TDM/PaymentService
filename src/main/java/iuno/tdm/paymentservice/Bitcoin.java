@@ -275,7 +275,7 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
                     .div(count);
 
             SendRequest sr = SendRequest.to(addr, amount);
-            sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
+            // sr.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE;
 
             try
             {
@@ -320,8 +320,9 @@ public class Bitcoin implements WalletCoinsReceivedEventListener, WalletChangeEv
         inv.invoiceId(invoiceId);
         BitcoinInvoice bcInvoice = new BitcoinInvoice(invoiceId, inv, wallet.freshReceiveAddress(),
                 wallet.freshReceiveAddress(), paymentSocketIOServlet, couponRandomSeed);
-        Wallet couponWallet = bcInvoice.getCouponWallet();
-        peerGroup.addWallet(couponWallet);
+        bcInvoice.setUseIncomingPaymentForTransfers(Boolean.parseBoolean(System.getProperty("useIncomingPaymentForTransfers", "false")));
+
+        peerGroup.addWallet(bcInvoice.getCouponWallet());
 
         // add invoice to hashmaps
         invoiceHashMap.put(invoiceId, bcInvoice);
