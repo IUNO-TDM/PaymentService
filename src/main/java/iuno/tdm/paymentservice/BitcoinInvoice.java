@@ -41,6 +41,8 @@ import java.net.URL;
 import java.util.*;
 
 import static com.google.common.base.Preconditions.checkState;
+import static iuno.tdm.paymentservice.BitcoinInvoiceStateChangedEventListener.PAYMENTSTATECHANGE;
+import static iuno.tdm.paymentservice.BitcoinInvoiceStateChangedEventListener.TRANSFERSTATECHANGE;
 import static org.bitcoinj.core.Utils.HEX;
 
 /**
@@ -105,7 +107,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onPaymentStateChanged(BitcoinInvoice.this, state, tx, txList);
+                bitcoinInvoiceCallbackInterface.onInvoiceStateChanged(PAYMENTSTATECHANGE, BitcoinInvoice.this, state, tx, txList);
             }
         }
     };
@@ -114,7 +116,7 @@ public class BitcoinInvoice implements WalletChangeEventListener, TransactionCon
         @Override
         public void mostConfidentTxStateChanged(Transaction tx, State state, Transactions txList) {
             if (bitcoinInvoiceCallbackInterface != null) {
-                bitcoinInvoiceCallbackInterface.onTransferStateChanged(BitcoinInvoice.this, state, tx, txList);
+                bitcoinInvoiceCallbackInterface.onInvoiceStateChanged(TRANSFERSTATECHANGE, BitcoinInvoice.this, state, tx, txList);
             }
         }
     };

@@ -53,17 +53,9 @@ public class PaymentSocketIOServlet extends JettySocketIOServlet implements Bitc
     }
 
     @Override
-    public void onPaymentStateChanged(BitcoinInvoice invoice, State state, Transaction tx, Transactions txList) {
-        stateChanged("PaymentStateChange", invoice.getInvoice(), state, tx, txList);
-    }
-
-    @Override
-    public void onTransferStateChanged(BitcoinInvoice invoice, State state, Transaction tx, Transactions txList) {
-        stateChanged("TransferStateChange", invoice.getInvoice(), state, tx, txList);
-    }
-
-    public void stateChanged(String eventName, Invoice invoice, State state, Transaction tx, Transactions txList) {
+    public void onInvoiceStateChanged(String eventName, BitcoinInvoice bitcoinInvoice, State state, Transaction tx, Transactions txList) {
         try {
+            Invoice invoice = bitcoinInvoice.getInvoice();
             String jsonString = buildStateJsonString(invoice, state, tx, txList);
             String roomId = invoice.getInvoiceId().toString();
             of("/invoices").in(roomId).emit(eventName, jsonString);
